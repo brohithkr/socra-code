@@ -1,0 +1,67 @@
+011-container-with-most-water.py
+problem: ---
+problem:
+
+Given n non-negative integers a1, a2, ..., an , where each represents a point at coordinate (i, ai). n vertical lines are drawn such that 
+the two endpoints of line i is at (i, ai) and (i, 0). Find two lines, which together with x-axis forms a container, such that the container 
+contains the most water.
+Note: You may not slant the container and n is at least 2.
+
+Example:
+
+Input: [1,8,6,2,5,4,8,3,7]
+Output: 49
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace >= with < on line 6.
+Replace `r += 1` with `r -= 1` on line 9.
+Add a return statement on line 10.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 6, l is updated if the height of the left side is greater than the right. This is incorrect behavior because it reverses the direction of the search. The >= operator should be replaced with the < operator.
+On line 9, r is incremented by 1. This results in an incorrect upper bound on the height. Therefore, it should be decremented instead.
+On line 10, or after line 9, nothing is returned from the method. maxarea should be returned to ensure correct behavior.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+6
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution(object):
+2.     def maxArea(self, height):
+3.         maxarea,l,r = 0,0,len(height)-1
+4.         while l < r:
+5.             maxarea = max(maxarea, min(height[l],height[r])*(r-l))
+6.             if height[l] >= height[r]:
+7.                 l += 1
+8.             else:
+9.                 r += 1
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution(object):
+2.     def maxArea(self, height):
+3.         maxarea,l,r = 0,0,len(height)-1
+4.         while l < r:
+5.             maxarea = max(maxarea, min(height[l],height[r])*(r-l))
+6.             if height[l] < height[r]:
+7.                 l += 1
+8.             else:
+9.                 r -= 1
+10.         return maxarea
+---
+
+-----------------------------------------------------------------------

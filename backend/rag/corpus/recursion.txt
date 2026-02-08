@@ -1,0 +1,8 @@
+# Recursion base case example
+
+def fib(n):
+    if n <= 1:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+# Base case must be reached to avoid infinite recursion

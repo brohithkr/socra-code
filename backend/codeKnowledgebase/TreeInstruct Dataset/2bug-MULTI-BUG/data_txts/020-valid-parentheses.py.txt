@@ -1,0 +1,90 @@
+020-valid-parentheses.py
+problem: ---
+problem:
+An input string is valid if:
+Open brackets must be closed by the same type of brackets.
+Open brackets must be closed in the correct order.
+Note that an empty string is also considered valid.
+
+Example 1:
+Input: "()"
+Output: true
+
+Example 2:
+Input: "()[]{}"
+Output: true
+
+Example 3:
+Input: "(]"
+Output: false
+
+Example 4:
+Input: "([)]"
+Output: false
+
+Example 5:
+Input: "{[]}"
+Output: true
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `if c in d.keys():` with `if c in d.values():` in line 10.
+Replace = with == on line 14.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 10, the current character c is compared with the keys in d, or the closing parantheses. This will result in incorrect behavior as the opening brackets will not be considered properly. Change the condition to check with values instead of the keys.
+On line 14, there is a syntax error due to the assignment operation. The mistake will be fixed by using the == comparison operator.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+10
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def isValid(self, s: str) -> bool:
+3.         stack = []
+4.         d = {
+5.           ')': '(',
+6.           '}': '{',
+7.           ']': '['
+8.         }
+9.         for c in s:
+10.           if c in d.keys():
+11.             stack.append(c)
+12.           elif (not stack) or (stack.pop() != d[c]):
+13.               return False
+14.         return len(stack) = 0
+15. 
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def isValid(self, s: str) -> bool:
+3.         stack = []
+4.         d = {
+5.           ')': '(',
+6.           '}': '{',
+7.           ']': '['
+8.         }
+9.         for c in s:
+10.           if c in d.values():
+11.             stack.append(c)
+12.           elif (not stack) or (stack.pop() != d[c]):
+13.               return False
+14.         return len(stack) == 0
+15. 
+---
+
+-----------------------------------------------------------------------

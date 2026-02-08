@@ -1,0 +1,99 @@
+429-n-ary-tree-level-order-traversal.py
+problem: ---
+problem:
+
+Given an n-ary tree, return the level order traversal of its nodes' values.
+Nary-Tree input serialization is represented in their level order traversal, 
+each group of children is separated by the null value. 
+
+Example 1:
+Input: root = [1,null,3,2,4,null,5,6]
+Output: [[1],[3,2,4],[5,6]]
+
+Example 2:
+Input: root = [1,null,2,3,4,5,null,null,6,7,null,8,null,9,10,null,null,11,null,12,null,13,null,null,14]
+Output: [[1],[2,3,4,5],[6,7,8,9,10],[11,12,13],[14]]
+ 
+Constraints:
+The height of the n-ary tree is less than or equal to 1000
+The total number of nodes is between [0, 10^4]
+"""
+"""
+# Definition for a Node.
+class Node:
+    def __init__(self, val=None, children=None):
+        self.val = val
+        self.children = children
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `None` with `[]` on line 5.
+Replace `root` with `[root]` on line 7.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 5, if there is no root node, None is returned. This is incorrect behavior as an invalid return value will pass up in the recursion stack. To fix this, simply return res or [].
+On line 7, queue is set to root. The queue variable is now a single Node object instead of a list of nodes. This will cause an issue because the while loop expects queue to be an iterable (like a list) so that it can iterate over its elements.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+5
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def levelOrder(self, root: 'Node') -> List[List[int]]:
+3.         res = []
+4.         if not root:
+5.           return None
+6.         
+7.         queue = root
+8.         while queue:
+9.           next_level = []
+10.           cur_level_val = []
+11.           
+12.           for cur_node in queue:
+13.             cur_level_val.append(cur_node.val)
+14.             if cur_node.children:
+15.               next_level.extend(cur_node.children)
+16.               
+17.           queue = next_level
+18.           res.append(cur_level_val)
+19.         return res
+20. 
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def levelOrder(self, root: 'Node') -> List[List[int]]:
+3.         res = []
+4.         if not root:
+5.           return res
+6.         
+7.         queue = [root]
+8.         while queue:
+9.           next_level = []
+10.           cur_level_val = []
+11.           
+12.           for cur_node in queue:
+13.             cur_level_val.append(cur_node.val)
+14.             if cur_node.children:
+15.               next_level.extend(cur_node.children)
+16.               
+17.           queue = next_level
+18.           res.append(cur_level_val)
+19.         return res
+20. 
+---
+
+-----------------------------------------------------------------------

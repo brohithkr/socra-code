@@ -1,0 +1,78 @@
+24-swap-nodes-in-pairs.py
+problem: ---
+problem:
+
+Given a linked list, swap every two adjacent nodes and return its head.
+You may not modify the values in the list's nodes, only nodes itself may be changed.
+
+Example:
+Given 1->2->3->4, you should return the list as 2->1->4->3.
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Add a colon at the end of line 7.
+Add `head = head.next` on line 11.
+Add `return cur` on line 15.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 7, a colon is missing from the while-loop, causing it to not terminate. This is a syntactical bug that can be fixed by adding a colon at the end.
+On line 11, the head node is never updated, which results in an incorrect order of ndoes. To fix the mistake, simply add `head = head.next` on line 11.
+On line 15, or after line 14, nothing is returned from the method, which results in an incorrect output. Adding `return cur` will fix this mistake.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+7
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution(object):
+2.     def swapPairs(self, head):
+3.         if not head:
+4.             return None
+5.         cur = head.next if head.next else head
+6.         prev = None
+7.         while head and head.next
+8.             temp = head.next
+9.             head.next = head.next.next
+10.             temp.next = head
+11. 
+12.             if prev:
+13.                 prev.next = temp
+14.             prev = temp.next
+15.             
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution(object):
+2.     def swapPairs(self, head):
+3.         """
+4.         :type head: ListNode
+5.         :rtype: ListNode
+6.         """
+7.         if not head:
+8.             return None
+9.         cur = head.next if head.next else head
+10.         prev = None
+11.         while head and head.next:
+12.             temp = head.next
+13.             head.next = head.next.next
+14.             temp.next = head
+15.             head = head.next
+16.             if prev:
+17.                 prev.next = temp
+18.             prev = temp.next
+19.         return cur
+---
+
+-----------------------------------------------------------------------

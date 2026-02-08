@@ -1,0 +1,88 @@
+033-search-in-rotated-sorted-array.py
+problem: ---
+problem:
+
+Suppose an array sorted in ascending order is rotated at some pivot unknown to you beforehand.
+(i.e., [0,1,2,4,5,6,7] might become [4,5,6,7,0,1,2]).
+You are given a target value to search. If found in the array return its index, otherwise return -1.
+You may assume no duplicate exists in the array.
+Your algorithm's runtime complexity must be in the order of O(log n).
+
+Example 1:
+Input: nums = [4,5,6,7,0,1,2], target = 0
+Output: 4
+
+Example 2:
+Input: nums = [4,5,6,7,0,1,2], target = 3
+Output: -1
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `len(nums)` with `len(nums) - 1` on line 4.
+Add `return -1` on line 19.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 4, end is set to len(nums). In python, array indexing starts from 0, so the last valid index is len(nums) - 1. Setting end to len(nums) will result in an IndexOutOfBoundsException when nums[end] is accessed.
+On line 19, there is no return value if the target was not found. If the target is not found in the array, the function should return -1.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+4
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution(object):
+2.     def search(self, nums, target):
+3.         start = 0
+4.         end = len(nums)
+5.         while start <= end:
+6.             mid = (start + end)//2
+7.             if nums[mid] == target:
+8.                 return mid
+9.             elif nums[start] <= nums[mid]:
+10.                 if target >= nums[start] and target < nums[mid]:
+11.                     end = mid -1
+12.                 else:
+13.                     start = mid + 1
+14.             else:
+15.                 if target <= nums[end] and target > nums[mid]:
+16.                     start = mid + 1
+17.                 else:
+18.                     end = mid - 1
+19.         
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution(object):
+2.     def search(self, nums, target):
+3.         start = 0
+4.         end = len(nums) - 1
+5.         while start <= end:
+6.             mid = (start + end)//2
+7.             if nums[mid] == target:
+8.                 return mid
+9.             elif nums[start] <= nums[mid]:
+10.                 if target >= nums[start] and target < nums[mid]:
+11.                     end = mid -1
+12.                 else:
+13.                     start = mid + 1
+14.             else:
+15.                 if target <= nums[end] and target > nums[mid]:
+16.                     start = mid + 1
+17.                 else:
+18.                     end = mid - 1
+19.         return -1
+---
+
+-----------------------------------------------------------------------

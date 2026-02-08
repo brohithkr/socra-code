@@ -1,0 +1,74 @@
+41_first_missing_positive.py
+problem: ---
+problem:
+
+Example 1:
+Input: [1,2,0]
+Output: 3
+Example 2:
+
+Input: [3,4,-1,1]
+Output: 2
+Example 3:
+
+Input: [7,8,9,11,12]
+Output: 1
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `[0] * n` with `[1] + [0] * n` on line 4.
+Replace `j+1` with `n+1` on line 13.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 4, the list t is not initialized correctly. The first value needs to be a 1 because it is the smallest possible positive integer. Missing this could result in incorrect behavior.
+On line 13, the function is returning j + 1 instead of n + 1 when no missing positive integer is found in the range [1, n].
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+4
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution(object):
+2.     def firstMissingPositive(self, nums):
+3.         n = len(nums)
+4.         t = [0] * n
+5.         for i in nums:
+6.             if i >= 1 and i <= n:
+7.                 t[i] = 1
+8.         j = 1
+9.         while j <= n:
+10.             if t[j] == 0:
+11.                 return j
+12.             j +=1
+13.         return j+1
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution(object):
+2.     def firstMissingPositive(self, nums):
+3.         n = len(nums)
+4.         t = [1] + [0] * n
+5.         for i in nums:
+6.             if i >= 1 and i <= n:
+7.                 t[i] = 1
+8.         j = 1
+9.         while j <= n:
+10.             if t[j] == 0:
+11.                 return j
+12.             j +=1
+13.         return n+1
+---
+
+-----------------------------------------------------------------------

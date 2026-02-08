@@ -1,0 +1,79 @@
+23-merge-k-sorted-lists.py
+problem: ---
+problem:
+
+Merge k sorted linked lists and return it as one sorted list. Analyze and describe its complexity.
+
+Example:
+Input:
+[
+  1->4->5,
+  1->3->4,
+  2->6
+]
+Output: 1->1->2->3->4->4->5->6
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Add a colon at the end of line 8.
+Replace `if minNode.val > lists[i].val or not minNode:` with `if not minNode or minNode.val > lists[i].val:` on line 9.
+Replace `return res` with `return res.next` on line 15.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 8, a colon is missing from the if-condition, causing it to not terminate. This is a syntactical bug that can be fixed by adding a colon at the end.
+On line 9, minNode is confirmed as not None at the end of the condition. If minNode were None, it would result in a runtime error as minNode.val does not exist. To avoid this, move the sub-condition earlier like so: `not minNode or minNode.val > lists[i].val`.
+On line 15, res is returned from the method. The first node of res is a temporary node that starts the list. This is incorrect behavior, which can be fixed by returning res.next.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+8
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def mergeKLists(self, lists: List[ListNode]) -> ListNode:
+3.       res = ListNode(0)
+4.       cur = res
+5.       while cur:
+6.         minNode,index = None, -1
+7.         for i in range(len(lists)):
+8.           if lists[i]
+9.             if minNode.val > lists[i].val or not minNode:
+10.               minNode = lists[i]
+11.               index = i
+12.         if index != -1:
+13.           lists[index] = lists[index].next
+14.         cur.next, cur = minNode, minNode
+15.       return res
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def mergeKLists(self, lists: List[ListNode]) -> ListNode:
+3.       res = ListNode(0)
+4.       cur = res
+5.       while cur:
+6.         minNode,index = None, -1
+7.         for i in range(len(lists)):
+8.           if lists[i]:
+9.             if not minNode or minNode.val > lists[i].val:
+10.               minNode = lists[i]
+11.               index = i
+12.         if index != -1:
+13.           lists[index] = lists[index].next
+14.         cur.next, cur = minNode, minNode
+15.       return res.next
+---
+
+-----------------------------------------------------------------------

@@ -1,0 +1,357 @@
+Good question — this is where we **lock the system down** and avoid over-engineering.
+
+I’ll give you **one clear backend stack**, explain **why**, and show **where each part of the architecture lives**. No ambiguity.
+
+---
+
+## 1. Backend stack (recommended, minimal, correct)
+
+### **Primary backend**
+
+**Python + FastAPI**
+
+This is the backbone.
+
+### Why FastAPI (and not Express / Flask)?
+
+* Native async → perfect for **LLM calls + WebSockets**
+* Easy background tasks (benchmarks, scoring)
+* Python ecosystem → **RAG, embeddings, code execution**
+* Clean OpenAPI → frontend integration is trivial
+* Same language as:
+
+  * LLM orchestration
+  * RAG
+  * benchmarking scripts
+
+👉 This avoids glue code across Node + Python.
+
+---
+
+## 2. High-level backend architecture
+
+```
+backend/
+├── api/                # FastAPI routes
+│   ├── game.py
+│   ├── practice.py
+│   ├── ws.py
+│   └── health.py
+│
+├── core/               # Socratic backend (ASV)
+│   ├── planner.py
+│   ├── generator.py
+│   ├── verifier.py
+│   ├── rag.py
+│   └── state.py
+│
+├── execution/          # Code sandbox
+│   ├── runner.py
+│   └── docker_pool.py
+│
+├── benchmarks/         # Offline only
+│   ├── dataset/
+│   ├── runner.py
+│   └── metrics.py
+│
+├── models/             # Model clients
+│   ├── openrouter.py
+│   ├── groq.py
+│   └── local.py
+│
+├── store/              # State & persistence
+│   ├── redis.py
+│   └── memory.py
+│
+└── main.py
+```
+
+---
+
+## 3. Backend technologies (exact list)
+
+### 3.1 API layer
+
+**FastAPI**
+
+* REST endpoints
+* WebSocket endpoints (multiplayer)
+* JSON-first
+* Async
+
+Used for:
+
+* Create game session
+* Join game via code
+* Run code
+* Request hint
+* Submit solution
+
+---
+
+### 3.2 Real-time multiplayer
+
+**FastAPI WebSockets**
+
+Why WebSockets?
+
+* Shared editor state
+* Timer sync
+* Hint penalties broadcast
+* Game score updates
+
+Each game room:
+
+* One WebSocket channel
+* Multiple clients
+* Server is authoritative
+
+No need for Socket.IO unless you want reconnection sugar.
+
+---
+
+### 3.3 Game & session state
+
+**Redis (recommended)**
+Fallback: in-memory dict (dev only)
+
+Redis stores:
+
+* room_id → players
+* code snapshot
+* hint count
+* time started
+* scores
+
+Why Redis?
+
+* Fast
+* Shared state
+* TTL for rooms
+* Simple key-value
+
+Example:
+
+```
+game:{room_id}:state
+game:{room_id}:code
+game:{room_id}:scores
+```
+
+---
+
+## 4. Socratic backend (core intelligence)
+
+This is **pure Python**, no framework coupling.
+
+### 4.1 Planner (TreeInstruct-style)
+
+`planner.py`
+
+* Input:
+
+  * buggy code
+  * error output
+  * past hints
+* Output:
+
+  * target concept (e.g. “loop boundary”)
+  * hint intent (question / nudge / clarification)
+
+Implementation:
+
+* Prompt-based reasoning
+* No tree search explosion
+* Depth-1 or depth-2 planning only
+
+---
+
+### 4.2 Generator (LLM)
+
+`generator.py`
+
+* Calls:
+
+  * OpenRouter / Groq / local model
+* Generates:
+
+  * 3–5 Socratic hint candidates
+
+Models:
+
+* SOTA: Llama 3.3 70B, GPT-OSS, Gemini Flash
+* SLM: Llama 3 8B, Mistral 7B, Qwen 7B
+
+---
+
+### 4.3 Verifier (no training)
+
+`verifier.py`
+
+This is **NOT a model you train**.
+
+It is:
+
+> a **judge LLM call**
+
+Input:
+
+* buggy code
+* hint candidate
+* planning intent
+
+Output:
+
+* numeric score (0–10)
+* optional reason
+
+You select the **highest scoring hint**.
+
+This replaces RLHF and fine-tuning.
+
+---
+
+### 4.4 RAG engine
+
+`rag.py`
+
+**Technologies used:**
+
+* FAISS (vector search)
+* Sentence-transformers / code embeddings
+* Plain filesystem for code corpus
+
+Corpus:
+
+* Python / Java / C++ files
+* Known buggy + correct versions
+* Treated as *logic reference*, not syntax oracle
+
+RAG flow:
+
+```
+query = embed(buggy_code + error)
+snippets = faiss.search(query)
+inject snippets into generator prompt
+```
+
+This is **critical for SLMs**.
+
+---
+
+## 5. Code execution backend
+
+### Technology
+
+**Docker-based sandbox**
+
+Why Docker?
+
+* Language isolation
+* Security
+* Reproducibility
+
+Each run:
+
+* Create container
+* Mount code
+* Execute
+* Capture stdout/stderr
+* Kill container
+
+Languages:
+
+* Python
+* Java
+* C++
+
+This lives in:
+`execution/runner.py`
+
+---
+
+## 6. Benchmarking backend (offline only)
+
+### Technology
+
+**Pure Python scripts**
+
+No FastAPI.
+No WebSockets.
+No frontend.
+
+Used for:
+
+* architecture validation
+* SOTA vs SLM comparison
+* regression testing
+
+Runs:
+
+```
+python benchmarks/runner.py --model slm
+python benchmarks/runner.py --model sota
+```
+
+Outputs:
+
+* CSV
+* JSON
+* plots
+
+---
+
+## 7. What we intentionally do NOT use
+
+❌ Node backend
+❌ Express
+❌ Flask
+❌ LangChain (optional, but not required)
+❌ Fine-tuning pipelines
+❌ Online evaluation
+
+This keeps:
+
+* latency low
+* reasoning explicit
+* architecture readable
+
+---
+
+## 8. Frontend ↔ backend contract (simple)
+
+Frontend talks to backend via:
+
+* REST:
+
+  * `/run`
+  * `/hint`
+  * `/create-game`
+* WebSocket:
+
+  * `/ws/{room_id}`
+
+Backend:
+
+* authoritative game logic
+* AI orchestration
+* scoring
+
+Frontend:
+
+* UI only
+
+---
+
+## 9. One-line answer (if you had to explain to someone)
+
+> “The backend is a **Python FastAPI server** with **WebSockets**, **Redis for multiplayer state**, **Docker sandboxes for code execution**, a **FAISS-based RAG engine**, and a **prompt-driven multi-agent Socratic LLM pipeline**.”
+
+If you want next:
+
+* I can draw a **request-flow diagram**
+* or lock **exact model choices per component**
+* or design **Redis schemas + WebSocket events**
+
+Just say the word.
+

@@ -1,0 +1,93 @@
+015-3sum.py
+problem: ---
+problem:
+
+Given an array nums of n integers, are there elements a, b, c in nums such that a + b + c = 0?
+Find all unique triplets in the array which gives the sum of zero.
+
+Note:
+The solution set must not contain duplicate triplets.
+
+Example:
+Given array nums = [-1, 0, 1, 2, -1, -4],
+
+A solution set is:
+[
+  [-1, 0, 1],
+  [-1, -1, 2]
+]
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `nums = nums.sort()` with `nums.sort()` on line 4.
+Replace `len(nums)` with `len(nums)-1` on line 8.
+Replace `start += 1` with `while curStart == nums[start] and start < end: start += ` on line 14.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 4, the result of nums.sort() is being set as nums. nums.sort() does not return anything, and it sorts the array in-place, which results in nums being set to None. This is incorrect behavior, and can be fixed by simply using nums.sort().
+On line 8, end is being set to the length of the nums array instead of len(nums)-1, which will cause an IndexError as Python lists are 0-indexed.
+On line 14, the start pointer is simply incremented by 1. This does not correctly handle duplicates. The correct way is to skip over the duplicates using a while loop.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+4
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def threeSum(self, nums: List[int]) -> List[List[int]]:
+3.         res = []
+4.         nums = nums.sort()
+5.         for i in range(len(nums)-2):
+6.           if i == 0 or nums[i] > nums[i-1]:
+7.             start = i+1
+8.             end = len(nums)
+9.             while start < end:
+10.               Sum = nums[i] + nums[start] + nums[end]
+11.               if Sum == 0:
+12.                 res.append([nums[i],nums[start],nums[end]])
+13.               elif Sum < 0:
+14.                 start += 1
+15.               else:
+16.                 curEnd = nums[end]
+17.                 while curEnd == nums[end] and start < end:
+18.                   end -= 1
+19.         return res
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def threeSum(self, nums: List[int]) -> List[List[int]]:
+3.         res = []
+4.         nums.sort()
+5.         for i in range(len(nums)-2):
+6.           if i == 0 or nums[i] > nums[i-1]:
+7.             start = i+1
+8.             end = len(nums)-1
+9.             while start < end:
+10.               Sum = nums[i] + nums[start] + nums[end]
+11.               if Sum == 0:
+12.                 res.append([nums[i],nums[start],nums[end]])
+13.               if Sum < 0:
+14.                 curStart = nums[start]
+15.                 while curStart == nums[start] and start < end:
+16.                   start += 1
+17.               else:
+18.                 curEnd = nums[end]
+19.                 while curEnd == nums[end] and start < end:
+20.                   end -= 1
+21.         return res
+---
+
+-----------------------------------------------------------------------

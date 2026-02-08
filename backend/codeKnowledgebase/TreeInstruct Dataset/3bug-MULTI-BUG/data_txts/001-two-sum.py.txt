@@ -1,0 +1,66 @@
+001-two-sum.py
+problem: ---
+problem:
+Given an array of integers, 
+return indices of the two numbers such that they add up to a specific target.
+
+You may assume that each input would have exactly one solution, and 
+you may not use the same element twice.
+
+Example:
+Given nums = [2, 7, 11, 15], target = 9,
+Because nums[0] + nums[1] = 2 + 7 = 9,
+return [0, 1].
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `nums[i] - target` with `target - nums[i]` on line 5.
+Replace `d = []` with `d = {}` on line 3.
+Add a colon at the end of line 6.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 5, difference is calculated as nums[i] - target. This results in a negative number, which will not be found. Therefore, the difference needs to be calculated as target - nums[i].
+On line 3, d is initialized as a list, but is used as a dictionary later on. This results in a runtime error. d needs to be initialized as a dictionary, by using '{}' to indicate a dictionary instead of a list.
+On line 6, a colon is missing from the if-condition, causing it to not terminate. This is a syntactical bug that can be fixed by adding a colon at the end.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+5
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def twoSum(self, nums: List[int], target: int) -> List[int]:
+3.       d = []
+4.       for i in range(len(nums)):
+5.         difference = nums[i] - target
+6.         if difference in d
+7.           return [d[difference], i]
+8.         d[nums[i]] = i
+9.       return d
+10. 
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def twoSum(self, nums: List[int], target: int) -> List[int]:
+3.       d = {}
+4.       for i in range(len(nums)):
+5.         difference = target - nums[i]
+6.         if difference in d:
+7.           return [d[difference], i]
+8.         d[nums[i]] = i
+---
+
+-----------------------------------------------------------------------

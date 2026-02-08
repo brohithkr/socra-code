@@ -1,0 +1,84 @@
+3-longest-substring-without-repeating-characters.py
+problem: ---
+problem:
+
+Given a string, find the length of the longest substring without repeating characters.
+
+Example 1:
+Input: "abcabcbb"
+Output: 3 
+Explanation: The answer is "abc", with the length of 3. 
+
+Example 2:
+Input: "bbbbb"
+Output: 1
+Explanation: The answer is "b", with the length of 1.
+
+Example 3:
+Input: "pwwkew"
+Output: 3
+Explanation: The answer is "wke", with the length of 3. 
+             Note that the answer must be a substring, "pwke" is a subsequence and not a substring.
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `temp.append(s[i])` with `temp.add(s[i])` on line 14.
+Replace `return max_length` with `return max(max_length, len(s)-index)` on line 15.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 14, temp is treated as a list, which is why the `append` method is used. temp should be a set, and the correct method is `add`.
+On line 15, the max_length is returned. The rest of the method does not consider the possibility of a longer subset at the end of the string. Therefore, it should return the maximum between the max_length and len(s)-index, i.e. max(max_length, len(s)-index).
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+14
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def lengthOfLongestSubstring(self, s: str) -> int:
+3.       temp = set()
+4.       max_length = 0
+5.       index = 0
+6.       for i in range(len(s)):
+7.         if s[i] in temp:
+8.           max_length = max(max_length, i-index)
+9.           while s[index] != s[i]:
+10.             temp.remove(s[index])
+11.             index += 1
+12.           index += 1
+13.         else:
+14.           temp.append(s[i])
+15.       return max_length
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def lengthOfLongestSubstring(self, s: str) -> int:
+3.       temp = set()
+4.       max_length = 0
+5.       index = 0
+6.       for i in range(len(s)):
+7.         if s[i] in temp:
+8.           max_length = max(max_length, i-index)
+9.           while s[index] != s[i]:
+10.             temp.remove(s[index])
+11.             index += 1
+12.           index += 1
+13.         else:
+14.           temp.add(s[i])
+15.       return max(max_length, len(s)-index)
+---
+
+-----------------------------------------------------------------------

@@ -1,0 +1,76 @@
+5-longest-palindromic-substring.py
+problem: ---
+problem:
+
+Given a string s, find the longest palindromic substring in s. 
+You may assume that the maximum length of s is 1000.
+
+Example 1:
+Input: "babad"
+Output: "bab"
+Note: "aba" is also a valid answer.
+
+Example 2:
+Input: "cbbd"
+Output: "bb"
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `for j in range(len(s), i-1, -1):` with `for j in range(len(s)-1, i-1, -1):` on line 7.
+Replace `>` with `<` on line 9.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 6, the starting value j for the for-loop is out of bounds for the array s. It should start from len(s)-1, instead.
+On line 9, the code will only update start_index and max_len if the current palindrome found is shorter than the previously recorded longest palindrome. This is the opposite of the intended logic. The > operator should be <.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+7
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def longestPalindrome(self, s: str) -> str:
+3.         if len(s) < 2:
+4.             return s
+5.         start_index = max_len = 0
+6.         for i in range(len(s)):
+7.             for j in range(len(s), i-1, -1):
+8.                 if s[i:j+1] == (s[j:i-1:-1] if i > 0 else s[j::-1]):
+9.                     if max_len > j - i + 1:
+10.                         start_index = i
+11.                         max_len = j - i + 1
+12.                     break
+13.         return s[start_index: start_index + max_len]
+14.             
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def longestPalindrome(self, s: str) -> str:
+3.         if len(s) < 2:
+4.             return s
+5.         start_index = max_len = 0
+6.         for i in range(len(s)):
+7.             for j in range(len(s)-1, i-1, -1):
+8.                 if s[i:j+1] == (s[j:i-1:-1] if i > 0 else s[j::-1]):
+9.                     if max_len < j - i + 1:
+10.                         start_index = i
+11.                         max_len = j - i + 1
+12.                     break
+13.         return s[start_index: start_index + max_len]
+14.             
+---
+
+-----------------------------------------------------------------------

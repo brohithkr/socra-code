@@ -1,0 +1,102 @@
+4-median-of-two-sorted-arrays.py
+problem: ---
+problem:
+
+There are two sorted arrays nums1 and nums2 of size m and n respectively.
+Find the median of the two sorted arrays. The overall run time complexity should be O(log (m+n)).
+You may assume nums1 and nums2 cannot be both empty.
+
+Example 1:
+nums1 = [1, 3]
+nums2 = [2]
+The median is 2.0
+
+Example 2:
+nums1 = [1, 2]
+nums2 = [3, 4]
+The median is (2 + 3)/2 = 2.5
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `return self.findMedianSortedArrays(nums1, nums2)` with `return self.findMedianSortedArrays(nums2, nums1)` on line 4.
+Replace `inf` with `-inf` on line 10.
+Replace `inf` with `-inf` on line 13.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 4, a recursive call is made with the same order of parameters. If the if-condition on line 3 is True, the program is stuck in an infinite loop. The order of the lists should be switched, i.e., self.findMedianSortedArrays(nums2, nums1).
+On line 10, leftX is set to infinity, which means leftX will never be updated to lower bound of the binary search. The search will be disrupted because leftX will always be too large. It should be set to negative infinity, or `-inf`.
+On line 13, leftY is set to infinity, which means leftY will never be updated to lower bound of the binary search. The search will be disrupted because leftY will always be too large. It should be set to negative infinity, or `-inf`.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+4
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
+3.         if  len(nums1) > len(nums2):
+4.           return self.findMedianSortedArrays(nums1, nums2)
+5.         start = 0
+6.         end = len(nums1)
+7.         while start <= end:
+8.           midX = (start+end)//2
+9.           midY = ((len(nums1) + len(nums2) + 1)//2) - midX
+10.           leftX = float('inf') if midX == 0 else nums1[midX-1]
+11.           rightX = float('inf') if midX == len(nums1) else nums1[midX]
+12.           
+13.           leftY = float('inf') if midY == 0 else nums2[midY-1]
+14.           rightY = float('inf') if midY == len(nums2) else nums2[midY]
+15.           if leftX <= rightY and leftY <= rightX:
+16.             if (len(nums1)+len(nums2)) % 2 == 0:
+17.               return (max(leftX, leftY)+min(rightX, rightY))/2
+18.             else:
+19.               return max(leftX, leftY)
+20.             
+21.           elif leftX > rightY:
+22.             end = midX - 1
+23.           else:
+24.             start = midX + 1
+25. 
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
+3.         if  len(nums1) > len(nums2):
+4.           return self.findMedianSortedArrays(nums2, nums1)
+5.         start = 0
+6.         end = len(nums1)
+7.         while start <= end:
+8.           midX = (start+end)//2
+9.           midY = ((len(nums1) + len(nums2) + 1)//2) - midX
+10.           leftX = float('-inf') if midX == 0 else nums1[midX-1]
+11.           rightX = float('inf') if midX == len(nums1) else nums1[midX]
+12.           
+13.           leftY = float('-inf') if midY == 0 else nums2[midY-1]
+14.           rightY = float('inf') if midY == len(nums2) else nums2[midY]
+15.           if leftX <= rightY and leftY <= rightX:
+16.             if (len(nums1)+len(nums2)) % 2 == 0:
+17.               return (max(leftX, leftY)+min(rightX, rightY))/2
+18.             else:
+19.               return max(leftX, leftY)
+20.             
+21.           elif leftX > rightY:
+22.             end = midX - 1
+23.           else:
+24.             start = midX + 1
+25. 
+---
+
+-----------------------------------------------------------------------

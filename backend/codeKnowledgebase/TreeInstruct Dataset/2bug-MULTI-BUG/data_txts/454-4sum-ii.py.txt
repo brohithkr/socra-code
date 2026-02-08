@@ -1,0 +1,91 @@
+454-4sum-ii.py
+problem: ---
+problem:
+
+Given four integer arrays nums1, nums2, nums3, and nums4 all of length n, return the number of tuples 
+(i, j, k, l) such that:
+0 <= i, j, k, l < n
+nums1[i] + nums2[j] + nums3[k] + nums4[l] == 0
+
+Example 1:
+Input: nums1 = [1,2], nums2 = [-2,-1], nums3 = [-1,2], nums4 = [0,2]
+Output: 2
+Explanation:
+The two tuples are:
+1. (0, 0, 0, 1) -> nums1[0] + nums2[0] + nums3[0] + nums4[1] = 1 + (-2) + (-1) + 2 = 0
+2. (1, 1, 0, 0) -> nums1[1] + nums2[1] + nums3[0] + nums4[0] = 2 + (-1) + (-1) + 0 = 0
+
+Example 2:
+Input: nums1 = [0], nums2 = [0], nums3 = [0], nums4 = [0]
+Output: 1
+
+Constraints:
+n == nums1.length
+n == nums2.length
+n == nums3.length
+n == nums4.length
+1 <= n <= 200
+-228 <= nums1[i], nums2[i], nums3[i], nums4[i] <= 228
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `cur_sum.get(num1+num2)` with `cur_sum.get(num1+num2, 0)` on line 7.
+Replace `nums3` with `nums4` on line 11.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 7, if num1+num2 is not found in cur_sum, then None will be returned. This will result in a runtime error. This can be fixed by returning 0 if num1+num2 is not found by using the value parameter in the get() method.
+On line 11, the list nums3 is being iterated over instead of nums4. This seems to be a syntactical mistake as nums4 needs to be iterated over. Replacing nums3 with nums4 will fix the bug.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+7
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def fourSumCount(self, nums1: List[int], nums2: List[int], nums3: List[int], nums4: List[int]) -> int:
+3.         cur_sum = {}
+4.         
+5.         for num1 in nums1:
+6.             for num2 in nums2:
+7.                 cur_sum[num1+num2] = cur_sum.get(num1+num2) + 1
+8.                 
+9.         count = 0         
+10.         for num3 in nums3:
+11.             for num4 in nums3:
+12.                 count += cur_sum.get(-num3-num4, 0)
+13.                 
+14.         return count
+15. 
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def fourSumCount(self, nums1: List[int], nums2: List[int], nums3: List[int], nums4: List[int]) -> int:
+3.         cur_sum = {}
+4.         
+5.         for num1 in nums1:
+6.             for num2 in nums2:
+7.                 cur_sum[num1+num2] = cur_sum.get(num1+num2, 0) + 1
+8.                 
+9.         count = 0         
+10.         for num3 in nums3:
+11.             for num4 in nums4:
+12.                 count += cur_sum.get(-num3-num4, 0)
+13.                 
+14.         return count
+15. 
+---
+
+-----------------------------------------------------------------------

@@ -1,0 +1,368 @@
+Alright, here’s **the whole picture**, end-to-end, clean and consistent with **all constraints you’ve set**.
+No hand-waving, no hidden training, no “magic model”.
+
+---
+
+# THE COMPLETE SOCIATIC SPRINT SYSTEM (FINAL FORM)
+
+## Core constraints (locked in)
+
+* ❌ No fine-tuning by us
+
+* ❌ No local inference (models, RAG, embeddings all via APIs)
+
+* ❌ No online benchmarking
+
+* ❌ No model retraining or adapters
+
+* ✅ Use **existing hosted models**
+
+* ✅ Use **architecture + orchestration** to enforce pedagogy
+
+* ✅ Use **RAG to help SLMs with logic**
+
+* ✅ Game frontend is **just a UI shell**
+
+* ✅ Benchmarking is **offline & developer-only**
+
+---
+
+## 1. Big picture (one mental model)
+
+> **This is a multi-agent Socratic tutoring backend wrapped inside a multiplayer coding game.**
+
+The system has **three layers**:
+
+```
+┌───────────────────────────┐
+│        FRONTEND           │  (React / Next)
+│  editor · terminal · game │
+└─────────────▲─────────────┘
+              │
+┌─────────────┴─────────────┐
+│         BACKEND            │  (FastAPI)
+│ game state · sockets · API │
+└─────────────▲─────────────┘
+              │
+┌─────────────┴─────────────┐
+│     SOCratic BRAIN         │
+│ planner · RAG · tutor ·   │
+│ code reasoner · verifier  │
+└───────────────────────────┘
+```
+
+Everything interesting happens in the **Socratic Brain**.
+
+---
+
+## 2. Models used (final, realistic)
+
+### A. Socratic Tutor Model (pedagogy first)
+
+**eth-nlped/TutorRL-7B**
+
+* Fine-tuned with RL for *tutoring behavior*
+* Trained to:
+
+  * ask questions
+  * scaffold reasoning
+  * avoid giving solutions
+* Domain: math → **behavior transfers to code**
+
+👉 Role: **HOW to talk**, not WHAT to fix.
+
+---
+
+### B. Optional lightweight Socratic model
+
+**eurecom-ds/phi-3-mini-4k-socratic**
+
+* Smaller, cheaper
+* Very strict Socratic style
+* Used when:
+
+  * low latency
+  * cheap hints
+  * early-stage guidance
+
+---
+
+### C. Code Reasoner Model (logic first)
+
+One of:
+
+* **CodeLlama-Instruct**
+* **WizardCoder-Instruct**
+* **Qwen-Coder**
+* or a strong hosted general model
+
+👉 Role: **understand the bug**, not talk to the student.
+
+---
+
+### D. Verifier Model (judge, not generator)
+
+Can be:
+
+* same model as code reasoner
+* or cheaper general LLM
+
+👉 Role: **reject bad hints**, score pedagogy + correctness.
+
+---
+
+## 3. Why we STILL don’t rely on a single model
+
+Even TutorRL-7B **cannot**:
+
+* deeply analyze complex code
+* reason about edge cases reliably
+* scale across languages alone
+
+So:
+
+> **Pedagogy ≠ reasoning ≠ verification**
+
+They are **separate responsibilities**.
+
+This is the key architectural insight.
+
+---
+
+## 4. The Socratic Brain (step by step)
+
+### Step 1: Input arrives
+
+From frontend:
+
+* buggy code
+* selected language
+* runtime error (if any)
+* history of hints used
+* time elapsed
+
+---
+
+### Step 2: RAG (logic grounding, API-only)
+
+**Goal:** help reasoning models, especially SLMs.
+
+* Code corpus:
+
+  * buggy + fixed examples
+  * algorithms
+  * common mistakes
+* Vector DB:
+
+  * hosted (Pinecone / Weaviate / hosted FAISS)
+* Embeddings:
+
+  * hosted embedding APIs
+
+RAG returns:
+
+* *conceptual references*, not copy-paste code
+
+👉 Used ONLY internally, never shown to user.
+
+---
+
+### Step 3: Planner (TreeInstruct-style, shallow)
+
+Planner decides **intent**, not text.
+
+Output example:
+
+```json
+{
+  "bug_class": "off-by-one",
+  "hint_level": 2,
+  "strategy": "question",
+  "target_concept": "loop boundary"
+}
+```
+
+No generation yet.
+
+---
+
+### Step 4: Code Reasoner (logic extraction)
+
+Prompted with:
+
+* code
+* error
+* RAG snippets
+* planner intent
+
+Output:
+
+* internal analysis
+* *what is wrong*
+* *where to guide the student*
+
+This output is **not user-facing**.
+
+---
+
+### Step 5: Socratic Tutor (TutorRL-7B)
+
+TutorRL-7B receives:
+
+* planner intent
+* reasoning summary (not full solution)
+* strict rules:
+
+  * ask ONE question
+  * no fixes
+  * no code dumps
+
+It generates **multiple candidate hints**.
+
+---
+
+### Step 6: Verifier (EduDial enforcement)
+
+Verifier scores each hint on:
+
+* avoids solution
+* targets correct bug
+* Socratic tone
+* progression vs repetition
+
+Only the **best hint survives**.
+
+This is where:
+
+> architecture replaces fine-tuning.
+
+---
+
+### Step 7: Hint returned to frontend
+
+Frontend shows:
+
+* hint text
+* penalty counter (+1)
+* time keeps running
+
+---
+
+## 5. Frontend (kept intentionally dumb)
+
+### First screen
+
+* Practice
+* Game
+
+---
+
+### Practice mode
+
+* Code editor (Monaco)
+* Language selector
+* Run
+* Hint button
+* Terminal output
+
+No scoring pressure.
+
+---
+
+### Game mode (multiplayer)
+
+* Create game → unique code
+* Others join via code
+* Shared editor state (WebSockets)
+* Same problem for all
+
+---
+
+## 6. Game logic (simple, measurable)
+
+Winner decided by:
+
+```
+score = 
+  correctness_weight
+- (hint_count × hint_penalty)
+- (time_taken × time_penalty)
+```
+
+Displayed:
+
+* time
+* hints used
+* solved / not solved
+
+That’s it. No complexity creep.
+
+---
+
+## 7. Backend technology (final)
+
+* **FastAPI** (async, WebSockets)
+* **Redis** (game/session state)
+* **Docker sandbox** (code execution)
+* **Hosted vector DB** (RAG)
+* **Hosted LLM APIs only**
+
+No local models. Ever.
+
+---
+
+## 8. Benchmarking (offline, architecture proof)
+
+Runs separately.
+
+### What we compare
+
+* Vanilla code model
+* Code model + RAG
+* Code model + TutorRL
+* Full ASV pipeline
+
+### Metrics
+
+* hint count to solution
+* solution leakage rate
+* bug localization accuracy
+* Socratic compliance
+
+Outputs:
+
+* CSV
+* plots
+* README proof
+
+Not part of runtime.
+
+---
+
+## 9. Why this system is strong
+
+* Uses **existing fine-tuned Socratic models**
+* Does **not depend on any single model**
+* Shows **architecture > model size**
+* Works for **SOTA and SLM**
+* Educationally principled
+* Gameified but serious
+
+This is **not a toy chatbot**.
+It’s a **tutoring system with enforcement**.
+
+---
+
+## 10. One-sentence description (the essence)
+
+> *A multiplayer coding game powered by a multi-agent Socratic tutoring backend that enforces pedagogical behavior using existing tutor-aligned models, code-aware reasoning models, RAG grounding, and verifier-based control — without training any models.*
+
+If you want next, we can:
+
+* freeze **exact model/provider list**
+* write **final prompts**
+* design **benchmark scripts**
+* or draw **sequence diagrams**
+
+You’ve got a real system here.
+

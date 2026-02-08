@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+backend/.venv/
+node_modules/
+frontend/dist/
+backend/rag/index/
+backend/problems/data/
+uv.lock

@@ -1,0 +1,112 @@
+054-spiral-matrix.py
+problem: ---
+problem:
+
+Given a matrix of m x n elements (m rows, n columns), return all elements of the matrix in spiral order.
+
+Example 1:
+Input:
+[
+ [ 1, 2, 3 ],
+ [ 4, 5, 6 ],
+ [ 7, 8, 9 ]
+]
+Output: [1,2,3,6,9,8,7,4,5]
+
+Example 2:
+Input:
+[
+  [1, 2, 3, 4],
+  [5, 6, 7, 8],
+  [9,10,11,12]
+]
+Output: [1,2,3,4,8,12,11,10,9,5,6,7]
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `len(matrix)` with `len(matrix)-1` on line 6.
+Replace `/` with `%` on line 27.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 6, bottom is set to the number of rows in matrix. This is incorrect because it is out of bounds of the array, resulting in a runtime error. Fix it by setting bottom to len(matrix) - 1.
+On line 27, direction+1 is divided by 4, which could result in a floating point number. direction could also take a value higher than 4, which could result in an infinite loop as no variable will be updated. Therefore, using a modulo operation would fix this error.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+6
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution(object):
+2.     def spiralOrder(self, matrix):
+3.         if matrix == []:
+4.             return []
+5.         top = left = 0
+6.         bottom = len(matrix)
+7.         right = len(matrix[0]) - 1
+8.         direction = 0
+9.         res = []
+10.         while top <= bottom and left <= right:
+11.             if direction == 0:
+12.                 for i in range(left,right+1):
+13.                     res.append(matrix[top][i])
+14.                 top += 1
+15.             elif direction == 1:
+16.                 for i in range(top,bottom+1):
+17.                     res.append(matrix[i][right])
+18.                 right -= 1
+19.             elif direction == 2:
+20.                 for i in range(right,left-1,-1):
+21.                     res.append(matrix[bottom][i])
+22.                 bottom -= 1
+23.             elif direction == 3:
+24.                 for i in range(bottom, top-1, -1):
+25.                     res.append(matrix[i][left])
+26.                 left += 1
+27.             direction = (direction+1) / 4
+28.         return res
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution(object):
+2.     def spiralOrder(self, matrix):
+3.         if matrix == []:
+4.             return []
+5.         top = left = 0
+6.         bottom = len(matrix) - 1
+7.         right = len(matrix[0]) - 1
+8.         direction = 0
+9.         res = []
+10.         while top <= bottom and left <= right:
+11.             if direction == 0:
+12.                 for i in range(left,right+1):
+13.                     res.append(matrix[top][i])
+14.                 top += 1
+15.             elif direction == 1:
+16.                 for i in range(top,bottom+1):
+17.                     res.append(matrix[i][right])
+18.                 right -= 1
+19.             elif direction == 2:
+20.                 for i in range(right,left-1,-1):
+21.                     res.append(matrix[bottom][i])
+22.                 bottom -= 1
+23.             elif direction == 3:
+24.                 for i in range(bottom, top-1, -1):
+25.                     res.append(matrix[i][left])
+26.                 left += 1
+27.             direction = (direction+1) % 4
+28.         return res
+---
+
+-----------------------------------------------------------------------

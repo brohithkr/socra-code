@@ -1,0 +1,372 @@
+Absolutely — here is the **FULL FINAL ARCHITECTURE**, **exact component map**, **model/provider matrix**, **data flows**, and **feature breakdown** *based on only existing hosted models and free inference providers* as we discussed. This is the **clean, production-ready blueprint** for your Socratic coding tutor + multiplayer game.
+
+---
+
+# 🚀 THE BIG PICTURE — END-TO-END SYSTEM
+
+This architecture ties together:
+✔ Socratic reasoning
+✔ Code analysis & RAG
+✔ Multiplayer game
+✔ Free inference provider support
+✔ Modular, scalable backend
+
+---
+
+## 🧠 1. OVERALL ARCHITECTURE
+
+```
+[ USER (Browser) ]
+         │
+         ▼
+   Frontend (Next.js / React)
+         │
+         ▼ websocket + REST
+[ Backend (FastAPI) ]
+         │
+         ├── Session management (Redis)
+         │
+         ├── Code Execution Module (Sandboxed API)
+         │
+         ├── Socratic Brain
+         │      ├── Planner
+         │      ├── RAG Engine
+         │      ├── Code Reasoner
+         │      ├── Socratic Tutor
+         │      └── Verifier
+         │
+         └── Free Inference Providers (APIs)
+                ├── OpenRouter
+                ├── HuggingFace Inference
+                └── (Optional) Google AI Studio
+```
+
+---
+
+## 📌 2. FRONTEND — USER EXPERIENCE
+
+### Main Screens
+
+✔ **Home**
+
+* Choose: Practice or Game
+
+✔ **Practice Mode**
+
+* Code editor (Monaco)
+* Run button → executes code
+* Hint button → ask AI for hint
+* Terminal output
+* Score tracker (optional)
+
+✔ **Game Mode**
+
+* Generate/Enter Game Code
+* Real-time shared editor with participants
+* Hint penalties displayed
+* Timer
+* Scoreboard
+
+### Frontend Communicates With Backend
+
+| Event           | Method         |
+| --------------- | -------------- |
+| Run code        | REST `/run`    |
+| Ask hint        | REST `/hint`   |
+| Join game       | WebSocket      |
+| Update code     | WebSocket      |
+| Deliver scoring | WebSocket/REST |
+
+---
+
+## 🧠 3. BACKEND — FASTAPI
+
+### Core Responsibilities
+
+✔ Host REST endpoints
+✔ Host WebSocket server for real-time game sync
+✔ Manage game sessions (Redis)
+✔ Orchestrate Socratic AI calls
+✔ Run sandboxed code execution
+
+---
+
+## 📦 4. MULTIPLAYER SESSION MANAGEMENT
+
+**Tech:** Redis
+Stores:
+
+```
+game:<id>:state
+game:<id>:code
+game:<id>:participants
+game:<id>:hintsCount
+game:<id>:timeStarted
+game:<id>:scores
+```
+
+Used for:
+✔ Fast game state updates
+✔ Real-time sync
+✔ Score calculations
+
+---
+
+## 🧪 5. CODE EXECUTION SANDBOX
+
+**Language Support**
+
+* Python
+* Java
+* C++
+
+**How it works**
+
+1. Receive code + language
+2. Launch isolated Docker container
+3. Run code + gather stdout/stderr
+4. Return result to frontend
+
+**Why Docker**
+
+* Secure isolation
+* Language independence
+* Reliability
+
+---
+
+## 🔍 6. THE SOCRATIC BRAIN (CORE)
+
+This is your **multi-agent AI pipeline** that makes your tutor *pedagogical, not greedy*.
+
+```
+Input → Planner → Code Reasoner + RAG → Tutor → Verifier → Output
+```
+
+---
+
+### 🔹 6.1 PLANNER
+
+**Goal:**
+Determine the *type of hint* required:
+
+* Concept focus
+* Bug category
+* Difficulty tier
+* Question tone
+
+**Output Example**
+
+```json
+{
+  "intent": "question",
+  "focus": "loop logic",
+  "severity": "medium"
+}
+```
+
+---
+
+### 🔹 6.2 RAG (RETRIEVAL)
+
+**Purpose**
+Help reasoners by giving real code examples:
+
+* Common bugs
+* Correct patterns
+* Language idioms
+
+**How it works**
+
+1. Embed incoming code/error
+2. Query vector database (hosted)
+3. Return top-k similar snippets
+4. Feed into AI prompts
+
+**Example Providers**
+
+* Hugging Face embeddings API
+* OpenRouter model embeddings
+
+---
+
+### 🔹 6.3 CODE REASONER
+
+**What it does**
+
+* Deep analysis of bug
+* Combines error + code context + RAG
+* Outputs a *reasoning summary*
+
+Not visible to user.
+
+---
+
+### 🔹 6.4 SOCRATIC TUTOR
+
+**Model choices**
+(use free providers)
+
+Primary:
+✔ `eth-nlped/TutorRL-7B` — Socratic behavior
+
+Fallback / variation:
+✔ `openrouter/free` — auto picks free model
+✔ `eurecom-ds/phi-3-mini-4k-socratic` — strict Socratic trained
+
+**Role**
+
+* Generate multiple *hint candidates*
+* ALWAYS ask a question
+* NEVER give complete answer
+
+Example prompt:
+
+```text
+You are a Socratic coding tutor.
+Given: buggy code + error + reasoning summary
+Ask one guiding question.
+No direct solutions.
+```
+
+---
+
+### 🔹 6.5 VERIFIER
+
+**Goal**
+Choose the *best Socratic hint*.
+
+**Evaluation Criteria**
+✔ No solution dumping
+✔ Guides reasoning
+✔ Targets bug
+✔ Socratic style
+
+**Implementation**
+Prompt an LLM to score each candidate hint from 0–10.
+
+Pick the highest scoring one.
+
+---
+
+## 💡 7. INFERENCE PROVIDER MATRIX
+
+### Free-First Providers
+
+| System Role              | Model                            | Provider              | Free Tier |
+| ------------------------ | -------------------------------- | --------------------- | --------- |
+| Code Reasoner            | `qwen/qwen3-4b`                  | OpenRouter            | ✔         |
+| Reasoning                | `mistralai/mistral-7b-instruct`  | OpenRouter            | ✔         |
+| General Instruct         | `meta-llama/llama-3-8b-instruct` | OpenRouter            | ✔         |
+| Socratic Tutor           | `eth-nlped/TutorRL-7B`*          | HF Inference API      | ✔*        |
+| Socratic Tutor           | `openrouter/free`                | OpenRouter            | ✔         |
+| Backup Socratic          | `phi-3-mini-4k-socratic`         | OpenRouter / local HF | ✔         |
+| Large General (fallback) | Gemini 3 Flash                   | Google AI Studio      | 🟡        |
+| Embeddings for RAG       | HF Embeddings                    | HF API                | ✔         |
+
+* *TutorRL-7B availability depends on HF Inference provider support.*
+
+---
+
+## 🧠 8. GAME SCORING FORMULA
+
+```
+score = +1000
+        - (hint_count × 50)
+        - (time_seconds × 0.5)
+```
+
+**Interpretation**
+✔ Hints are penalties
+✔ Faster solves score better
+✔ First correct wins + highest score
+
+---
+
+## 🧪 9. OFFLINE BENCHMARKING
+
+Not part of runtime.
+
+**Tasks**
+✔ Hint quality
+✔ Bug targeting accuracy
+✔ Hint efficiency (# hints → success)
+✔ Socratic compliance (no direct solutions)
+
+**Compare**
+
+* Vanilla code LLM
+* Code LLM + RAG
+* Code LLM + TutorRL Socratic
+* Full pipeline
+
+Generates:
+📊 CSV
+📈 Metrics
+📚 Developer insights
+
+---
+
+## 🧾 10. PROMPT TEMPLATES (FINAL)
+
+### Code Reasoner Prompt
+
+```
+Analyze the following code and error:
+{code}
+Error: {error}
+Include RAG context: {rag_snippets}
+Return a plain reasoning summary.
+```
+
+---
+
+### Socratic Tutor Prompt
+
+```
+You are a Socratic tutor.
+Focus on asking ONE guiding question:
+- No solution
+- No code fixes
+- Help the student discover issue
+
+Bug summary:
+{reasoning_summary}
+```
+
+---
+
+### Verifier Prompt
+
+```
+Score this hint from 0 to 10:
+- Does it avoid direct solutions?
+- Is it question based?
+- Does it address correct bug?
+Return only a number.
+```
+
+---
+
+## 🏁 FINAL SUMMARY
+
+You now have:
+
+✔ A full backend architecture
+✔ A multi-agent Socratic AI pipeline
+✔ Inference provider matrix with free tiers
+✔ Multiplayer game logic
+✔ RAG integration
+✔ Role definitions for each LLM
+✔ Clear scoring rules
+
+---
+
+If you want, the next step is:
+
+📌 **Exact API snippet examples** for each model/provider
+📌 **JSON config file** for backend
+📌 **Sequence diagrams** for hint flow + WebSocket sync
+
+Just tell me which you're ready for next! 🎯
+

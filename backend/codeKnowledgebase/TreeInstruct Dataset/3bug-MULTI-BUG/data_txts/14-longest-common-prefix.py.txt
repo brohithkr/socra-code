@@ -1,0 +1,85 @@
+14-longest-common-prefix.py
+problem: ---
+problem:
+
+Write a function to find the longest common prefix string amongst an array of strings.
+If there is no common prefix, return an empty string "".
+
+Example 1:
+Input: ["flower","flow","flight"]
+Output: "fl"
+
+Example 2:
+Input: ["dog","racecar","car"]
+Output: ""
+Explanation: There is no common prefix among the input strings.
+
+Note:
+All given inputs are in lowercase letters a-z.
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `res = strs` with `res = strs[0]` on line 5.
+Add a colon at the end of line 13.
+Replace `res[length:]` with `res[:length]` on line 16.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 5, res is set to the strs array, but is referenced as a singular string later on. This seems to be a syntactical mistake, where res is the first element of the strs array, i.e., strs[0].
+On line 13, a colon is missing from the if-condition, causing it to not terminate. This is a syntactical bug that can be fixed by adding a colon at the end.
+On line 16, the suffix of res is returned instead of the prefix. This is incorrect behavior and therefore, res[:length] should be returned.
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+5
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution:
+2.     def longestCommonPrefix(self, strs: List[str]) -> str:
+3.       if not strs:
+4.         return ""
+5.       res = strs
+6.       length = len(res)
+7.       for i in range(1,len(strs)):
+8.         index = 0
+9.         while index < length and index < len(strs[i]):
+10.           if res[index] != strs[i][index]:
+11.             break
+12.           index += 1
+13.         if not index
+14.           return ""
+15.         length = index
+16.       return res[length:]
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution:
+2.     def longestCommonPrefix(self, strs: List[str]) -> str:
+3.       if not strs:
+4.         return ""
+5.       res = strs[0]
+6.       length = len(res)
+7.       for i in range(1,len(strs)):
+8.         index = 0
+9.         while index < length and index < len(strs[i]):
+10.           if res[index] != strs[i][index]:
+11.             break
+12.           index += 1
+13.         if not index:
+14.           return ""
+15.         length = index
+16.       return res[:length]
+---
+
+-----------------------------------------------------------------------

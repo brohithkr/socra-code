@@ -1,0 +1,99 @@
+38-count-and-say.py
+problem: ---
+problem:
+
+The count-and-say sequence is the sequence of integers with the first five terms as following:
+1.     1
+2.     11
+3.     21
+4.     1211
+5.     111221
+1 is read off as "one 1" or 11.
+11 is read off as "two 1s" or 21.
+21 is read off as "one 2, then one 1" or 1211.
+
+Given an integer n where 1 ≤ n ≤ 30, generate the nth term of the count-and-say sequence.
+Note: Each term of the sequence of integers will be represented as a string.
+
+Example 1:
+Input: 1
+Output: "1"
+
+Example 2:
+Input: 4
+Output: "1211"
+---
+
+-----------------------------------------------------------------------
+bug_fixes: ---
+bug_fixes:
+Replace `return 1` with `return "1"` on line 4. 
+Replace `for i in range(s)` with `for i in s` on line 8.
+Replace `res.join("")` with `"".join(res)` on line 18.
+---
+
+-----------------------------------------------------------------------
+bug_desc: ---
+bug_desc:
+On line 4, an integer is returned with the base case. This is incorrect because the return value is a string. Returning str(1) or "1" will fix the mistake.
+On line 8, the range function is used incorrectly since the string s is passed into the function. This is a syntactical mistake and should be changed to `for i in s` to iterate over the characters of s correctly.
+On line 18, a runtime error occurs because the list res does not have a function called join. This is a syntactical mistake as the correct syntax for the join is: "".join(res).
+---
+
+-----------------------------------------------------------------------
+line_no: ---
+line_no:
+4
+---
+
+-----------------------------------------------------------------------
+buggy_code: ---
+buggy_code:
+1. class Solution(object):
+2.     def countAndSay(self, n):
+3.         if n == 1:
+4.             return 1
+5.         s = "1"
+6.         for _ in range(n-1):
+7.             curVal,count,res = s[0], 0, []
+8.             for i in range(s):
+9.                 if curVal == i:
+10.                     count += 1
+11.                 else:
+12.                     res.append(str(count))
+13.                     res.append(curVal)
+14.                     curVal = i
+15.                     count = 1
+16.             res.append(str(count))
+17.             res.append(curVal)
+18.             s = res.join("")
+19.         return s
+20. 
+---
+
+-----------------------------------------------------------------------
+correct_code: ---
+correct_code:
+1. class Solution(object):
+2.     def countAndSay(self, n):
+3.         if n == 1:
+4.             return "1"
+5.         s = "1"
+6.         for _ in range(n-1):
+7.             curVal,count,res = s[0], 0, []
+8.             for i in s:
+9.                 if curVal == i:
+10.                     count += 1
+11.                 else:
+12.                     res.append(str(count))
+13.                     res.append(curVal)
+14.                     curVal = i
+15.                     count = 1
+16.             res.append(str(count))
+17.             res.append(curVal)
+18.             s = "".join(res)
+19.         return s
+20. 
+---
+
+-----------------------------------------------------------------------

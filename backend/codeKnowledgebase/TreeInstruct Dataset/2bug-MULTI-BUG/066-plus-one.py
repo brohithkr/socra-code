@@ -1,0 +1,37 @@
+"""
+<problem>
+Problem Link: https://leetcode.com/problems/plus-one/description
+
+Given a non-empty array of digits representing a non-negative integer, plus one to the integer.
+The digits are stored such that the most significant digit is at the head of the list, and each element in the array contain a single digit.
+You may assume the integer does not contain any leading zero, except the number 0 itself.
+
+Example 1:
+Input: [1,2,3]
+Output: [1,2,4]
+Explanation: The array represents the integer 123.
+
+Example 2:
+Input: [4,3,2,1]
+Output: [4,3,2,2]
+Explanation: The array represents the integer 4321.
+</problem>
+<bug_fixes>
+Replace `range(len(digits)-1,-1)` with `range(len(digits)-1,-1,-1)` on line 3.
+Replace `digits.append(1)` with `digits.insert(0,1)` on line 9.
+</bug_fixes>
+<bug_desc>
+On line 3, the step parameter in range is set to the default, which is 1. This will cause an infinite loop because the intended step should be -1.
+On line 9, 1 is added to the end of the digits array, which is wrong because it needs to be inserted into the beginning of the loop. The correct method is .insert(0, 1).
+</bug_desc>
+"""
+class Solution(object):
+    def plusOne(self, digits):
+        for i in range(len(digits)-1,-1):
+            digits[i] +=1
+            if  digits[i] > 9:
+                digits[i] = 0
+            else:
+                return digits
+        digits.append(1)
+        return digits
