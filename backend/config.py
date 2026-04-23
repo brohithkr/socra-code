@@ -5,8 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
+from dotenv import load_dotenv
+
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 
 @dataclass
@@ -36,6 +39,8 @@ class Settings:
     groq_base_url: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 
     runner_mode: str = os.getenv("RUNNER_MODE", "docker")
+    container_runtime: str = os.getenv("CONTAINER_RUNTIME", "docker")
+    runner_fallback_to_local: bool = os.getenv("RUNNER_FALLBACK_TO_LOCAL", "true").lower() == "true"
     max_run_seconds: float = float(os.getenv("MAX_RUN_SECONDS", "5"))
 
     redis_url: str | None = os.getenv("REDIS_URL")
@@ -45,6 +50,9 @@ class Settings:
     embed_model: str = os.getenv("EMBED_MODEL", "intfloat/e5-base-v2")
     rag_top_k: int = int(os.getenv("RAG_TOP_K", "4"))
     rag_auto_build: bool = os.getenv("RAG_AUTO_BUILD", "true").lower() == "true"
+    rag_cache_size: int = int(os.getenv("RAG_CACHE_SIZE", "128"))
+    hint_candidate_count: int = int(os.getenv("HINT_CANDIDATE_COUNT", "3"))
+    verifier_parallelism: int = int(os.getenv("VERIFIER_PARALLELISM", "3"))
 
     problems_path: Path = Path(os.getenv("PROBLEMS_PATH", str(BASE_DIR / "problems" / "data" / "problems.jsonl")))
 

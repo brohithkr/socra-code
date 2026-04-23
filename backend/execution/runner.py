@@ -12,12 +12,15 @@ from ..config import settings
 
 async def run_code(language: str, code: str, stdin: str | None = None) -> Tuple[bool, str, str, int, int]:
     if settings.runner_mode == "docker":
-        from .docker_runner import run_in_docker
+        from .docker_runner import run_in_container
 
-        ok, stdout, stderr, exit_code, duration_ms = await run_in_docker(language, code, stdin)
-        if exit_code != 127 and "docker not available" not in stderr.lower():
+        ok, stdout, stderr, exit_code, duration_ms = await run_in_container(language, code, stdin)
+        container_unavailable = exit_code == 127 and "not available" in stderr.lower()
+        if not container_unavailable:
             return ok, stdout, stderr, exit_code, duration_ms
-        # fallback to local if docker isn't available
+        if not settings.runner_fallback_to_local:
+            return ok, stdout, stderr, exit_code, duration_ms
+        # fallback to local only when explicitly allowed
     return await _run_local(language, code, stdin)
 
 

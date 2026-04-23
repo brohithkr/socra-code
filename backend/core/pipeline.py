@@ -35,6 +35,8 @@ class HintPipeline:
         error: str | None,
         history: List[str],
         session_id: str,
+        candidate_count: int = 5,
+        verifier_use_llm: bool = True,
     ) -> Tuple[str, Plan, float]:
         knowledge_state = await self.tracer.snapshot(session_id)
         plan = await self.planner.plan(code=code, error=error, history=history, knowledge_state=knowledge_state)
@@ -46,10 +48,10 @@ class HintPipeline:
             error=error,
             rag_snippets=rag_snippets,
             reasoning_summary=reasoning,
-            n=5,
+            n=max(1, candidate_count),
         )
         context = f"Plan: {plan}. Error: {error or ''}. Reasoning: {reasoning}"
-        scored = await self.verifier.score(candidates, context=context)
+        scored = await self.verifier.score(candidates, context=context, use_llm=verifier_use_llm)
         scored.sort(key=lambda x: x[1], reverse=True)
         best_hint, best_score = scored[0]
         await self.tracer.note_hint(session_id, plan.target_concept)

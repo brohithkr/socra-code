@@ -9,9 +9,10 @@ from typing import Tuple
 from ..config import settings
 
 
-async def run_in_docker(language: str, code: str, stdin: str | None = None) -> Tuple[bool, str, str, int, int]:
-    if not shutil.which("docker"):
-        return False, "", "docker not available", 127, 0
+async def run_in_container(language: str, code: str, stdin: str | None = None) -> Tuple[bool, str, str, int, int]:
+    runtime = settings.container_runtime
+    if not shutil.which(runtime):
+        return False, "", f"{runtime} not available", 127, 0
 
     image_map = {
         "python": "python:3.11-slim",
@@ -42,8 +43,8 @@ async def run_in_docker(language: str, code: str, stdin: str | None = None) -> T
         else:
             cmd = ["bash", "-lc", "g++ /work/main.cpp -O2 -std=c++17 -o /work/a.out && /work/a.out"]
 
-        docker_cmd = [
-            "docker",
+        container_cmd = [
+            runtime,
             "run",
             "--rm",
             "-v",
@@ -53,7 +54,7 @@ async def run_in_docker(language: str, code: str, stdin: str | None = None) -> T
         ]
 
         proc = await asyncio.create_subprocess_exec(
-            *docker_cmd,
+            *container_cmd,
             stdin=asyncio.subprocess.PIPE if stdin else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -69,3 +70,7 @@ async def run_in_docker(language: str, code: str, stdin: str | None = None) -> T
 
     duration_ms = int((time.time() - start) * 1000)
     return proc.returncode == 0, stdout.decode(), stderr.decode(), proc.returncode, duration_ms
+
+
+async def run_in_docker(language: str, code: str, stdin: str | None = None) -> Tuple[bool, str, str, int, int]:
+    return await run_in_container(language, code, stdin)

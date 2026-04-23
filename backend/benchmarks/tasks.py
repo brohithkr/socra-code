@@ -15,6 +15,8 @@ async def evaluate_treeinstruct(
     router: LLMRouter,
     items: List[dict],
     embedder: EmbeddingModel,
+    candidate_count: int = 2,
+    verifier_use_llm: bool = False,
 ) -> Dict[str, float]:
     totals = {
         "problem_solving": 0.0,
@@ -39,6 +41,8 @@ async def evaluate_treeinstruct(
             error=None,
             history=[],
             session_id=f"bench:{item.get('id')}",
+            candidate_count=candidate_count,
+            verifier_use_llm=verifier_use_llm,
         )
 
         # Problem solving proxy: how well the hint aligns with bug description

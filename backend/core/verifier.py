@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import List, Tuple
 
@@ -7,18 +8,25 @@ from ..models.router import LLMRouter
 
 
 class Verifier:
-    def __init__(self, router: LLMRouter) -> None:
+    def __init__(self, router: LLMRouter, parallelism: int = 3) -> None:
         self.router = router
+        self.parallelism = max(1, parallelism)
 
-    async def score(self, candidates: List[str], context: str) -> List[Tuple[str, float]]:
-        results: List[Tuple[str, float]] = []
-        for hint in candidates:
-            try:
-                score = await self._score_with_llm(hint, context)
-            except Exception:
-                score = self._heuristic_score(hint)
-            results.append((hint, score))
-        return results
+    async def score(self, candidates: List[str], context: str, use_llm: bool = True) -> List[Tuple[str, float]]:
+        if not use_llm:
+            return [(hint, self._heuristic_score(hint)) for hint in candidates]
+
+        semaphore = asyncio.Semaphore(self.parallelism)
+
+        async def score_one(hint: str) -> Tuple[str, float]:
+            async with semaphore:
+                try:
+                    score = await self._score_with_llm(hint, context)
+                except Exception:
+                    score = self._heuristic_score(hint)
+                return hint, score
+
+        return await asyncio.gather(*(score_one(hint) for hint in candidates))
 
     async def _score_with_llm(self, hint: str, context: str) -> float:
         prompt = (

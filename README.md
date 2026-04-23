@@ -43,13 +43,18 @@ Key variables:
 - `GROQ_API_KEY=...`
 - `REDIS_URL=redis://localhost:6379/0`
 - `RUNNER_MODE=docker|local`
+- `CONTAINER_RUNTIME=docker|podman`
+- `RUNNER_FALLBACK_TO_LOCAL=true|false`
 - `CODE_KB_DIR=backend/codeKnowledgebase`
 - `RAG_INDEX_DIR=backend/rag/index`
 - `EMBED_MODEL=intfloat/e5-base-v2`
 
 ## Notes
 
-- Docker sandbox is the default for Python/Java/C++ execution.
+- `backend/.env` is loaded automatically on backend startup.
+- Container sandbox is the default for Python/Java/C++ execution.
+- To require containerized execution with no local fallback, set `RUNNER_MODE=docker` and `RUNNER_FALLBACK_TO_LOCAL=false`.
+- To use Podman for code execution, set `CONTAINER_RUNTIME=podman`.
 - The RAG index is built from `backend/codeKnowledgebase`.
 - Benchmarks are offline and run from `backend/benchmarks`.
 
@@ -58,3 +63,13 @@ Key variables:
 ```bash
 uv run python -m backend.benchmarks.benchmark_cli --dataset treeinstruct --limit 50
 ```
+
+Lower-cost benchmark run:
+
+```bash
+uv run python -m backend.benchmarks.benchmark_cli --dataset treeinstruct --limit 10 --candidate-count 2
+```
+
+Notes:
+- Benchmarks now default to `--candidate-count 2` and heuristic verifier scoring to reduce LLM calls.
+- Pass `--llm-verifier` if you want benchmark runs to use the verifier LLM as well.
