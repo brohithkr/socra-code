@@ -21,7 +21,7 @@ class Settings:
     cors_origins: List[str] = None
 
     llm_provider: str = os.getenv("LLM_PROVIDER", "openrouter")
-    llm_model: str = os.getenv("LLM_MODEL", "openrouter/free")
+    llm_model: str = os.getenv("LLM_MODEL", "")
     llm_provider_planner: str | None = os.getenv("LLM_PROVIDER_PLANNER")
     llm_provider_reasoner: str | None = os.getenv("LLM_PROVIDER_REASONER")
     llm_provider_tutor: str | None = os.getenv("LLM_PROVIDER_TUTOR")
