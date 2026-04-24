@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import List, Protocol
 
 from ..models.router import LLMRouter
+from .utils import parse_json
 
 
 class ChatTurn(Protocol):
@@ -37,7 +38,7 @@ class Planner:
         system = "You are a tutoring planner that outputs JSON only."
         try:
             outputs = await self.router.complete(role="planner", system=system, prompt=prompt, n=1, temperature=0.2)
-            plan_json = self._parse_json(outputs[0])
+            plan_json = parse_json(outputs[0])
             return Plan(
                 bug_class=plan_json.get("bug_class", "logic"),
                 hint_level=int(plan_json.get("hint_level", max(1, len(history) + 1))),
@@ -81,13 +82,6 @@ class Planner:
             content = turn.get("content", "") if isinstance(turn, dict) else turn.content
             lines.append(f"{role}: {content}")
         return "\n".join(lines)
-
-    def _parse_json(self, text: str) -> dict:
-        start = text.find("{")
-        end = text.rfind("}")
-        if start == -1 or end == -1:
-            raise ValueError("No JSON found")
-        return json.loads(text[start : end + 1])
 
     def _fallback_plan(self, code: str, output: str | None, history: List[str]) -> Plan:
         bug_class = "logic"
