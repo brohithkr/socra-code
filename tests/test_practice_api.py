@@ -109,7 +109,11 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"hint": "What does the loop condition allow on the final iteration?"},
+            {
+                "hint": "What does the loop condition allow on the final iteration?",
+                "mode": None,
+                "progress": None,
+            },
         )
         self.assertEqual(
             self.pipeline.calls[0]["user_message"],
