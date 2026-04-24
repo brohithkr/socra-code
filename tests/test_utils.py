@@ -15,9 +15,14 @@ class ParseJsonTests(unittest.TestCase):
 
     def test_extracts_last_json_object(self) -> None:
         text = '{"first": 1} ignore {"second": 2}'
-        # Greedy: first { to last } → entire span; should still parse outermost
+        # Greedy span is invalid JSON; fallback extracts the last object
         result = parse_json(text)
-        self.assertIn("second", result)
+        self.assertEqual(result, {"second": 2})
+
+    def test_raises_when_fallback_also_fails(self) -> None:
+        text = '{"a": 1} text {bad json}'
+        with self.assertRaises(ValueError):
+            parse_json(text)
 
     def test_raises_when_no_json(self) -> None:
         with self.assertRaises(ValueError):

@@ -23,4 +23,7 @@ def parse_json(text: str) -> dict[str, Any]:
         last_start = text.rfind("{", 0, end)
         if last_start == -1 or last_start == start:
             raise ValueError("No JSON object found in text")
-        return json.loads(text[last_start : end + 1])
+        try:
+            return json.loads(text[last_start : end + 1])
+        except json.JSONDecodeError:
+            raise ValueError("Failed to parse JSON object from text")
