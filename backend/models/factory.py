@@ -5,6 +5,8 @@ from .mock import MockProvider
 from .openrouter import OpenRouterProvider
 from .huggingface import HuggingFaceProvider
 from .groq import GroqProvider
+from .claude import ClaudeProvider
+from .openai_provider import OpenAIProvider
 from ..config import settings
 
 
@@ -16,4 +18,8 @@ def get_provider() -> BaseLLMProvider:
         return HuggingFaceProvider(settings.hf_api_key, settings.hf_base_url)
     if provider == "groq" and settings.groq_api_key:
         return GroqProvider(settings.groq_api_key, settings.groq_base_url)
+    if provider == "claude":
+        return ClaudeProvider(api_key=settings.anthropic_api_key)
+    if provider == "openai" and settings.openai_api_key:
+        return OpenAIProvider(settings.openai_api_key, settings.openai_base_url)
     return MockProvider()

@@ -8,6 +8,8 @@ from .openrouter import OpenRouterProvider
 from .huggingface import HuggingFaceProvider
 from .groq import GroqProvider
 from .mock import MockProvider
+from .claude import ClaudeProvider
+from .openai_provider import OpenAIProvider
 
 
 class LLMRouter:
@@ -23,6 +25,9 @@ class LLMRouter:
             self.providers["huggingface"] = HuggingFaceProvider(settings.hf_api_key, settings.hf_base_url)
         if settings.llm_provider == "mock":
             self.providers["mock"] = MockProvider()
+        self.providers["claude"] = ClaudeProvider(api_key=settings.anthropic_api_key)
+        if settings.openai_api_key:
+            self.providers["openai"] = OpenAIProvider(settings.openai_api_key, settings.openai_base_url)
 
     def _pick(self, role: str) -> tuple[BaseLLMProvider, str]:
         provider_name = getattr(settings, f"llm_provider_{role}", None) or settings.llm_provider

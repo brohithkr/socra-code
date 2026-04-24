@@ -37,6 +37,9 @@ class Settings:
     hf_base_url: str = os.getenv("HF_BASE_URL", "https://api-inference.huggingface.co")
     groq_api_key: str | None = os.getenv("GROQ_API_KEY")
     groq_base_url: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+    anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
+    openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+    openai_base_url: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
     runner_mode: str = os.getenv("RUNNER_MODE", "docker")
     container_runtime: str = os.getenv("CONTAINER_RUNTIME", "docker")
