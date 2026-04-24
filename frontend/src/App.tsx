@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import TopBar from "./components/TopBar";
 import ModeCard from "./components/ModeCard";
 import EditorPane from "./components/EditorPane";
 import Terminal from "./components/Terminal";
-import HintPanel from "./components/HintPanel";
+import TutorChatPanel from "./components/TutorChatPanel";
 import Scoreboard from "./components/Scoreboard";
-import { createGame, fetchProblem, fetchProblems, fetchRoom, requestHint, runCode } from "./lib/api";
-import type { HintResult, Language, RoomState, RunResult, WsMessage, ProblemDetail, ProblemSummary } from "./lib/types";
+import { createGame, fetchProblem, fetchProblems, fetchRoom, requestHint, runCode, sendTutorChat } from "./lib/api";
+import type { ChatMessage, HintResult, Language, RoomState, RunResult, WsMessage, ProblemDetail, ProblemSummary } from "./lib/types";
 import { createRoomSocket } from "./lib/ws";
 
 declare global {
@@ -31,13 +32,26 @@ function makeId() {
 }
 
 export default function App() {
-  const [mode, setMode] = useState<"home" | "practice" | "game">("home");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const mode: "home" | "practice" | "game" | null =
+    location.pathname === "/"
+      ? "home"
+      : location.pathname === "/practice"
+        ? "practice"
+        : location.pathname === "/game"
+          ? "game"
+          : null;
 
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState<string>(templates.python);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [hint, setHint] = useState<HintResult | null>(null);
   const [history, setHistory] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatting, setChatting] = useState(false);
   const [running, setRunning] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
@@ -52,6 +66,12 @@ export default function App() {
   const socketRef = useRef<ReturnType<typeof createRoomSocket> | null>(null);
   const [gameHint, setGameHint] = useState<HintResult | null>(null);
   const [gameRun, setGameRun] = useState<RunResult | null>(null);
+  const [gameHistory, setGameHistory] = useState<string[]>([]);
+  const [gameChatMessages, setGameChatMessages] = useState<ChatMessage[]>([]);
+  const [gameChatInput, setGameChatInput] = useState("");
+  const [gameChatting, setGameChatting] = useState(false);
+  const [gameRunning, setGameRunning] = useState(false);
+  const [gameAnalyzing, setGameAnalyzing] = useState(false);
 
   useEffect(() => {
     if (!selectedProblemId) {
@@ -80,6 +100,8 @@ export default function App() {
         setCode(nextCode);
         setHistory([]);
         setHint(null);
+        setChatMessages([]);
+        setChatInput("");
       })
       .catch(() => {
         setProblemDetail(null);
@@ -110,23 +132,56 @@ export default function App() {
   };
 
   const handleHint = async () => {
+    if (analyzing || chatting) return;
     setAnalyzing(true);
     try {
       const output = runResult ? (runResult.stdout + runResult.stderr).trim() || undefined : undefined;
       const result = await requestHint(language, code, output, history);
       setHint(result);
       setHistory((prev: string[]) => [...prev, result.hint]);
+      setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
     } catch (err) {
-      setHint({
-        hint: err instanceof Error ? err.message : "Hint failed",
-      });
+      const message = err instanceof Error ? err.message : "Hint failed";
+      setHint({ hint: message });
+      setChatMessages((prev) => [...prev, { role: "tutor", content: message }]);
     } finally {
       setAnalyzing(false);
     }
   };
 
+  const handleTutorChat = async () => {
+    const userMessage = chatInput.trim();
+    if (!userMessage || chatting || analyzing) return;
+
+    const output = runResult ? (runResult.stdout + runResult.stderr).trim() || undefined : undefined;
+    const nextMessages: ChatMessage[] = [...chatMessages, { role: "student", content: userMessage }];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setChatting(true);
+
+    try {
+      const result = await sendTutorChat(language, code, userMessage, output, history, chatMessages);
+      setHint(result);
+      setHistory((prev: string[]) => [...prev, result.hint]);
+      setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Chat failed";
+      setChatMessages((prev) => [...prev, { role: "tutor", content: message }]);
+    } finally {
+      setChatting(false);
+    }
+  };
+
   const connectRoom = (state: RoomState) => {
     setRoomState(state);
+    setGameHint(null);
+    setGameRun(null);
+    setGameHistory([]);
+    setGameChatMessages([]);
+    setGameChatInput("");
+    setGameChatting(false);
+    setGameRunning(false);
+    setGameAnalyzing(false);
     const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
     const socket = createRoomSocket(baseUrl, state.room_id, playerIdRef.current, playerName);
     socketRef.current = socket;
@@ -141,10 +196,31 @@ export default function App() {
         setRoomState((prev: RoomState | null) => (prev ? { ...prev, scores: message.payload.scores } : prev));
       }
       if (message.type === "hint_result") {
-        setGameHint(message.payload as HintResult);
+        const payload = message.payload as HintResult;
+        setGameHint(payload);
+        setGameHistory((prev) => [...prev, payload.hint]);
+        setGameChatMessages((prev) => [...prev, { role: "tutor", content: payload.hint }]);
+        setGameAnalyzing(false);
+      }
+      if (message.type === "chat_response") {
+        const payload = message.payload as HintResult;
+        setGameHint(payload);
+        setGameHistory((prev) => [...prev, payload.hint]);
+        setGameChatMessages((prev) => [...prev, { role: "tutor", content: payload.hint }]);
+        setGameChatting(false);
       }
       if (message.type === "run_result") {
         setGameRun(message.payload as RunResult);
+        setGameRunning(false);
+      }
+      if (message.type === "error") {
+        const payload = message.payload as { message?: string };
+        if (payload.message && (gameChatting || gameAnalyzing)) {
+          setGameChatMessages((prev) => [...prev, { role: "tutor", content: payload.message }]);
+        }
+        setGameChatting(false);
+        setGameAnalyzing(false);
+        setGameRunning(false);
       }
     });
   };
@@ -170,24 +246,57 @@ export default function App() {
   };
 
   const runGame = () => {
-    if (!roomState) return;
+    if (!roomState || gameRunning) return;
+    setGameRunning(true);
     sendGameMessage({ type: "run_request", payload: { code: roomState.code, language: roomState.language } });
   };
 
   const hintGame = () => {
-    if (!roomState) return;
+    if (!roomState || gameAnalyzing || gameChatting) return;
+    setGameAnalyzing(true);
     sendGameMessage({
       type: "hint_request",
-      payload: { code: roomState.code, language: roomState.language, output: gameRun ? (gameRun.stdout + gameRun.stderr).trim() || undefined : undefined, history: [] },
+      payload: {
+        code: roomState.code,
+        language: roomState.language,
+        output: gameRun ? (gameRun.stdout + gameRun.stderr).trim() || undefined : undefined,
+        history: gameHistory,
+        chat_history: gameChatMessages,
+      },
     });
   };
+
+  const handleGameTutorChat = () => {
+    if (!roomState) return;
+    const userMessage = gameChatInput.trim();
+    if (!userMessage || gameChatting || gameAnalyzing) return;
+
+    setGameChatMessages((prev) => [...prev, { role: "student", content: userMessage }]);
+    setGameChatInput("");
+    setGameChatting(true);
+    sendGameMessage({
+      type: "chat_message",
+      payload: {
+        code: roomState.code,
+        language: roomState.language,
+        output: gameRun ? (gameRun.stdout + gameRun.stderr).trim() || undefined : undefined,
+        history: gameHistory,
+        user_message: userMessage,
+        chat_history: gameChatMessages,
+      },
+    });
+  };
+
+  if (mode === null) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="h-screen overflow-hidden p-0 text-white">
       <div className="app-shell mx-auto flex h-full max-w-[1500px] flex-col overflow-hidden p-0">
         <TopBar
           mode={mode}
-          onBack={mode === "home" ? undefined : () => setMode("home")}
+          onBack={mode === "home" ? undefined : () => navigate("/")}
           language={language}
           onLanguageChange={setLanguage}
           problems={problems}
@@ -200,11 +309,15 @@ export default function App() {
               ? () => {
                   setSelectedProblemId("");
                   setProblemDetail(null);
+                  setHistory([]);
+                  setHint(null);
+                  setChatMessages([]);
+                  setChatInput("");
                 }
               : undefined
           }
           running={running}
-          analyzing={analyzing}
+          analyzing={analyzing || chatting}
         />
 
         {mode === "home" && (
@@ -223,13 +336,13 @@ export default function App() {
                 <div className="mt-8 flex flex-wrap gap-3">
                   <button
                     className="ui-button rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(37,99,235,0.35)]"
-                    onClick={() => setMode("practice")}
+                    onClick={() => navigate("/practice")}
                   >
                     Open Practice Studio
                   </button>
                   <button
                     className="ui-button rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white/85"
-                    onClick={() => setMode("game")}
+                    onClick={() => navigate("/game")}
                   >
                     Open Multiplayer Room
                   </button>
@@ -241,13 +354,13 @@ export default function App() {
                 title="Practice Mode"
                 description="Work solo with Socratic hints. Run code, track errors, and learn through guided questions."
                 action="Enter practice"
-                onClick={() => setMode("practice")}
+                onClick={() => navigate("/practice")}
               />
               <ModeCard
                 title="Game Mode"
                 description="Create or join a room, sync code in real-time, and compete on hints vs speed."
                 action="Enter game"
-                onClick={() => setMode("game")}
+                onClick={() => navigate("/game")}
               />
             </div>
           </div>
@@ -290,7 +403,7 @@ export default function App() {
             </div>
 
             {/* Right column: Tutor/Hint panel */}
-            <div className="glass-panel w-96 flex-none flex-col overflow-hidden border-l border-white/5">
+            <div className="glass-panel flex w-96 flex-none flex-col overflow-hidden border-l border-white/5">
               <div className="flex-none border-b border-white/5 bg-neutral-900/50 px-3 py-2">
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
@@ -304,8 +417,14 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto bg-gray-950/50 p-0">
-                <HintPanel hint={hint?.hint ?? ""} intent={hint?.intent} score={hint?.score} />
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <TutorChatPanel
+                  messages={chatMessages}
+                  input={chatInput}
+                  busy={chatting || analyzing}
+                  onInputChange={setChatInput}
+                  onSubmit={handleTutorChat}
+                />
               </div>
             </div>
           </div>
@@ -375,14 +494,16 @@ export default function App() {
                     <button
                       className="ui-button rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300"
                       onClick={runGame}
+                      disabled={gameRunning}
                     >
-                      Run
+                      {gameRunning ? "Running..." : "Run"}
                     </button>
                     <button
                       className="ui-button rounded-xl border border-blue-500/25 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-300"
                       onClick={hintGame}
+                      disabled={gameAnalyzing || gameChatting}
                     >
-                      Hint
+                      {gameAnalyzing ? "Asking..." : "Hint"}
                     </button>
                   </div>
                   <EditorPane
@@ -399,7 +520,30 @@ export default function App() {
                     hints={roomState.hints_used}
                   />
                   <Terminal output={gameRun?.stdout ?? ""} error={gameRun?.stderr} />
-                  <HintPanel hint={gameHint?.hint ?? ""} intent={gameHint?.intent} score={gameHint?.score} />
+                  <div className="glass-panel flex min-h-[360px] flex-col overflow-hidden">
+                    <div className="flex-none border-b border-white/5 bg-neutral-900/50 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                          <span className="text-xs">✦</span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-100">AI Teacher</div>
+                          <div className="text-[10px] text-gray-400">
+                            {gameHint?.score ? `Score: ${gameHint.score}` : "Room Tutor"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      <TutorChatPanel
+                        messages={gameChatMessages}
+                        input={gameChatInput}
+                        busy={gameChatting || gameAnalyzing}
+                        onInputChange={setGameChatInput}
+                        onSubmit={handleGameTutorChat}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

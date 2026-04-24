@@ -56,7 +56,12 @@ async def websocket_endpoint(
             elif msg_type == "run_request":
                 code = payload.get("code", "")
                 language = payload.get("language", "python")
-                ok, stdout, stderr, exit_code, duration_ms = await run_code(language=language, code=code)
+                stdin = payload.get("stdin")
+                ok, stdout, stderr, exit_code, duration_ms = await run_code(
+                    language=language,
+                    code=code,
+                    stdin=stdin,
+                )
                 await manager.send_to(
                     room_id,
                     player_id,
@@ -77,13 +82,17 @@ async def websocket_endpoint(
                 language = payload.get("language", "python")
                 output = payload.get("output")
                 history = payload.get("history", [])
+                user_message = payload.get("user_message")
+                chat_history = payload.get("chat_history", [])
                 hint, _plan, _score = await pipeline.run(
                     code=code,
                     output=output,
                     history=history,
+                    user_message=user_message,
+                    chat_history=chat_history,
                     session_id=room_id,
                 )
-                await store.increment_hints(room_id, player_id)
+                room_state = await store.increment_hints(room_id, player_id)
                 await manager.send_to(
                     room_id,
                     player_id,
@@ -94,6 +103,42 @@ async def websocket_endpoint(
                             "language": language,
                         },
                     },
+                )
+                await manager.broadcast(
+                    room_id,
+                    {"type": "room_state", "payload": {"state": room_state.to_dict()}},
+                )
+
+            elif msg_type == "chat_message":
+                code = payload.get("code", "")
+                language = payload.get("language", "python")
+                output = payload.get("output")
+                history = payload.get("history", [])
+                user_message = payload.get("user_message") or payload.get("message", "")
+                chat_history = payload.get("chat_history", [])
+                hint, _plan, _score = await pipeline.run(
+                    code=code,
+                    output=output,
+                    history=history,
+                    user_message=user_message,
+                    chat_history=chat_history,
+                    session_id=room_id,
+                )
+                room_state = await store.increment_hints(room_id, player_id)
+                await manager.send_to(
+                    room_id,
+                    player_id,
+                    {
+                        "type": "chat_response",
+                        "payload": {
+                            "hint": hint,
+                            "language": language,
+                        },
+                    },
+                )
+                await manager.broadcast(
+                    room_id,
+                    {"type": "room_state", "payload": {"state": room_state.to_dict()}},
                 )
 
             elif msg_type == "score_delta":

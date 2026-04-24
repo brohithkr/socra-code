@@ -4,6 +4,8 @@ interface TerminalProps {
 }
 
 export default function Terminal({ output, error }: TerminalProps) {
+  const primaryOutput = output || error || "// Output will appear here...";
+
   return (
     <div className="terminal-shell h-full">
       <div className="terminal-head flex items-center justify-between px-4 py-2">
@@ -15,9 +17,9 @@ export default function Terminal({ output, error }: TerminalProps) {
         </div>
       </div>
       <pre className="console-good min-h-[140px] whitespace-pre-wrap p-4 font-['Geist_Mono'] text-xs leading-6">
-        {output || "// Output will appear here..."}
+        {primaryOutput}
       </pre>
-      {error && (
+      {error && output && (
         <pre className="console-bad whitespace-pre-wrap border-t border-white/5 px-4 py-3 font-['Geist_Mono'] text-xs leading-6">
           {error}
         </pre>

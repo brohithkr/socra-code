@@ -13,9 +13,11 @@ class FailingPipeline:
     async def run(
         self,
         code: str,
-        error: str | None,
+        output: str | None,
         history: list[str],
         session_id: str,
+        user_message: str | None = None,
+        chat_history: list | None = None,
         candidate_count: int = 5,
         verifier_use_llm: bool = True,
     ) -> tuple[str, object, float]:
@@ -48,3 +50,69 @@ class PracticeApiTests(unittest.TestCase):
             response.json(),
             {"detail": "LLM provider request failed with status 401."},
         )
+
+
+class CapturingPipeline:
+    def __init__(self) -> None:
+        self.calls = []
+
+    async def run(
+        self,
+        code: str,
+        output: str | None,
+        history: list[str],
+        session_id: str,
+        user_message: str | None = None,
+        chat_history: list | None = None,
+        candidate_count: int = 5,
+        verifier_use_llm: bool = True,
+    ) -> tuple[str, object, float]:
+        self.calls.append(
+            {
+                "code": code,
+                "output": output,
+                "history": history,
+                "session_id": session_id,
+                "user_message": user_message,
+                "chat_history": chat_history,
+            }
+        )
+        return "What does the loop condition allow on the final iteration?", object(), 8.0
+
+
+class ChatApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.pipeline = CapturingPipeline()
+        app.dependency_overrides[practice.get_pipeline] = lambda: self.pipeline
+        self.client = TestClient(app)
+
+    def tearDown(self) -> None:
+        app.dependency_overrides.clear()
+
+    def test_chat_endpoint_passes_student_message_through_hint_pipeline(self) -> None:
+        response = self.client.post(
+            "/chat",
+            json={
+                "language": "python",
+                "code": "for i in range(len(values) + 1): pass",
+                "output": "IndexError",
+                "history": ["What happens at the final index?"],
+                "user_message": "I do not understand why this is out of range.",
+                "chat_history": [
+                    {"role": "tutor", "content": "What happens at the final index?"},
+                    {"role": "student", "content": "It should read the last value."},
+                ],
+                "session_id": "practice-1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"hint": "What does the loop condition allow on the final iteration?"},
+        )
+        self.assertEqual(
+            self.pipeline.calls[0]["user_message"],
+            "I do not understand why this is out of range.",
+        )
+        self.assertEqual(self.pipeline.calls[0]["session_id"], "practice-1")

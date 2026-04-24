@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 
 class RunRequest(BaseModel):
@@ -18,11 +18,18 @@ class RunResponse(BaseModel):
     duration_ms: int
 
 
+class ChatMessage(BaseModel):
+    role: Literal["student", "tutor"]
+    content: str
+
+
 class HintRequest(BaseModel):
     language: str
     code: str
     output: Optional[str] = None
     history: List[str] = Field(default_factory=list)
+    user_message: Optional[str] = None
+    chat_history: List[ChatMessage] = Field(default_factory=list)
     session_id: Optional[str] = None
 
 

@@ -30,12 +30,23 @@ async def run_endpoint(request: RunRequest):
 
 @router.post("/hint", response_model=HintResponse)
 async def hint_endpoint(request: HintRequest, pipeline: HintPipeline = Depends(get_pipeline)):
+    return await _run_hint_pipeline(request, pipeline)
+
+
+@router.post("/chat", response_model=HintResponse)
+async def chat_endpoint(request: HintRequest, pipeline: HintPipeline = Depends(get_pipeline)):
+    return await _run_hint_pipeline(request, pipeline)
+
+
+async def _run_hint_pipeline(request: HintRequest, pipeline: HintPipeline) -> HintResponse:
     session_id = request.session_id or "practice"
     try:
         hint, _plan, _score = await pipeline.run(
             code=request.code,
             output=request.output,
             history=request.history,
+            user_message=request.user_message,
+            chat_history=request.chat_history,
             session_id=session_id,
         )
     except httpx.HTTPStatusError as exc:

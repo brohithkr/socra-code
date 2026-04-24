@@ -1,4 +1,4 @@
-import type { HintResult, Language, RunResult, RoomState, ProblemSummary, ProblemDetail } from "./types";
+import type { ChatMessage, HintResult, Language, RunResult, RoomState, ProblemSummary, ProblemDetail } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -22,6 +22,34 @@ export async function requestHint(language: Language, code: string, output?: str
   });
   if (!resp.ok) {
     throw new Error("Hint failed");
+  }
+  return resp.json();
+}
+
+export async function sendTutorChat(
+  language: Language,
+  code: string,
+  userMessage: string,
+  output?: string,
+  history: string[] = [],
+  chatHistory: ChatMessage[] = [],
+  sessionId?: string,
+): Promise<HintResult> {
+  const resp = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      language,
+      code,
+      output,
+      history,
+      user_message: userMessage,
+      chat_history: chatHistory,
+      session_id: sessionId,
+    }),
+  });
+  if (!resp.ok) {
+    throw new Error("Chat failed");
   }
   return resp.json();
 }

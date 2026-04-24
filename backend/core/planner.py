@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import List
+from typing import List, Protocol
 
 from ..models.router import LLMRouter
+
+
+class ChatTurn(Protocol):
+    role: str
+    content: str
 
 
 @dataclass
@@ -19,8 +24,16 @@ class Planner:
     def __init__(self, router: LLMRouter) -> None:
         self.router = router
 
-    async def plan(self, code: str, output: str | None, history: List[str], knowledge_state: dict) -> Plan:
-        prompt = self._build_prompt(code, output, history, knowledge_state)
+    async def plan(
+        self,
+        code: str,
+        output: str | None,
+        history: List[str],
+        knowledge_state: dict,
+        user_message: str | None = None,
+        chat_history: List[ChatTurn] | None = None,
+    ) -> Plan:
+        prompt = self._build_prompt(code, output, history, knowledge_state, user_message, chat_history or [])
         system = "You are a tutoring planner that outputs JSON only."
         try:
             outputs = await self.router.complete(role="planner", system=system, prompt=prompt, n=1, temperature=0.2)
@@ -34,17 +47,40 @@ class Planner:
         except Exception:
             return self._fallback_plan(code, output, history)
 
-    def _build_prompt(self, code: str, output: str | None, history: List[str], knowledge_state: dict) -> str:
+    def _build_prompt(
+        self,
+        code: str,
+        output: str | None,
+        history: List[str],
+        knowledge_state: dict,
+        user_message: str | None = None,
+        chat_history: List[ChatTurn] | None = None,
+    ) -> str:
         output_block = output or "(no runtime output)"
+        chat_block = self._format_chat(chat_history or [])
+        student_message = user_message or "(no current student message)"
         return (
-            "Analyze the student's code and output.\n"
+            "Analyze the student's code, output, and latest doubt.\n"
             "Return JSON with keys: bug_class, hint_level, strategy, target_concept.\n"
             f"Output: {output_block}\n"
             f"History length: {len(history)}\n"
+            f"Prior hint history: {json.dumps(history)}\n"
+            f"Chat history:\n{chat_block}\n"
+            f"Latest student message: {student_message}\n"
             f"Knowledge state: {json.dumps(knowledge_state)}\n"
             "Code:\n"
             f"{code}\n"
         )
+
+    def _format_chat(self, chat_history: List[ChatTurn]) -> str:
+        if not chat_history:
+            return "(no chat history)"
+        lines = []
+        for turn in chat_history[-8:]:
+            role = turn.get("role", "student") if isinstance(turn, dict) else turn.role
+            content = turn.get("content", "") if isinstance(turn, dict) else turn.content
+            lines.append(f"{role}: {content}")
+        return "\n".join(lines)
 
     def _parse_json(self, text: str) -> dict:
         start = text.find("{")

@@ -12,6 +12,11 @@ export interface HintResult {
   hint: string;
 }
 
+export interface ChatMessage {
+  role: "student" | "tutor";
+  content: string;
+}
+
 export interface RoomState {
   room_id: string;
   language: Language;

@@ -13,10 +13,14 @@ class PromptBuilderTests(unittest.TestCase):
 
         prompt = reasoner._build_prompt(
             code="numbers[i]",
-            error="IndexError: list index out of range",
+            output="IndexError: list index out of range",
+            user_message="Why does this fail?",
+            chat_history=[{"role": "student", "content": "I tried the last index."}],
         )
 
-        self.assertIn("Error: IndexError: list index out of range", prompt)
+        self.assertIn("Output: IndexError: list index out of range", prompt)
+        self.assertIn("Latest student message: Why does this fail?", prompt)
+        self.assertIn("student: I tried the last index.", prompt)
         self.assertIn("Code:\nnumbers[i]", prompt)
         self.assertNotIn("RAG", prompt)
         self.assertNotIn("snippets", prompt.lower())
@@ -33,12 +37,15 @@ class PromptBuilderTests(unittest.TestCase):
         prompt = generator._build_prompt(
             plan=plan,
             code="numbers[i]",
-            error="IndexError",
+            output="IndexError",
             reasoning_summary="The final index is invalid.",
+            user_message="Why does this fail?",
+            chat_history=[{"role": "student", "content": "I tried the last index."}],
         )
 
         self.assertIn("Reasoning summary: The final index is invalid.", prompt)
+        self.assertIn("Latest student message: Why does this fail?", prompt)
+        self.assertIn("student: I tried the last index.", prompt)
         self.assertIn("Code:\nnumbers[i]", prompt)
         self.assertNotIn("RAG", prompt)
         self.assertNotIn("internal context", prompt)
-

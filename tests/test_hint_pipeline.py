@@ -10,13 +10,23 @@ class FakePlanner:
     def __init__(self) -> None:
         self.calls = []
 
-    async def plan(self, code: str, error: str | None, history: list[str], knowledge_state: dict) -> Plan:
+    async def plan(
+        self,
+        code: str,
+        output: str | None,
+        history: list[str],
+        knowledge_state: dict,
+        user_message: str | None = None,
+        chat_history: list | None = None,
+    ) -> Plan:
         self.calls.append(
             {
                 "code": code,
-                "error": error,
+                "output": output,
                 "history": list(history),
                 "knowledge_state": dict(knowledge_state),
+                "user_message": user_message,
+                "chat_history": list(chat_history or []),
             }
         )
         return Plan(
@@ -31,8 +41,21 @@ class FakeReasoner:
     def __init__(self) -> None:
         self.calls = []
 
-    async def summarize(self, code: str, error: str | None) -> str:
-        self.calls.append({"code": code, "error": error})
+    async def summarize(
+        self,
+        code: str,
+        output: str | None,
+        user_message: str | None = None,
+        chat_history: list | None = None,
+    ) -> str:
+        self.calls.append(
+            {
+                "code": code,
+                "output": output,
+                "user_message": user_message,
+                "chat_history": list(chat_history or []),
+            }
+        )
         return "The loop likely runs one step too far."
 
 
@@ -44,16 +67,20 @@ class FakeGenerator:
         self,
         plan: Plan,
         code: str,
-        error: str | None,
+        output: str | None,
         reasoning_summary: str,
+        user_message: str | None = None,
+        chat_history: list | None = None,
         n: int = 5,
     ) -> list[str]:
         self.calls.append(
             {
                 "plan": plan,
                 "code": code,
-                "error": error,
+                "output": output,
                 "reasoning_summary": reasoning_summary,
+                "user_message": user_message,
+                "chat_history": list(chat_history or []),
                 "n": n,
             }
         )
@@ -102,8 +129,10 @@ class HintPipelineTests(unittest.IsolatedAsyncioTestCase):
 
         hint, plan, score = await pipeline.run(
             code="for i in range(len(values) + 1): pass",
-            error="IndexError: list index out of range",
+            output="IndexError: list index out of range",
             history=["Can you help?"],
+            user_message="Why is the last item crashing?",
+            chat_history=[{"role": "student", "content": "I think the loop is fine."}],
             session_id="practice",
             candidate_count=2,
             verifier_use_llm=False,
@@ -115,8 +144,9 @@ class HintPipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tracer.snapshots, ["practice"])
         self.assertEqual(tracer.hints, [("practice", "loop boundary")])
         self.assertEqual(planner.calls[0]["knowledge_state"], {"loop boundary": 0.4})
-        self.assertEqual(reasoner.calls, [{"code": "for i in range(len(values) + 1): pass", "error": "IndexError: list index out of range"}])
+        self.assertEqual(reasoner.calls[0]["output"], "IndexError: list index out of range")
+        self.assertEqual(reasoner.calls[0]["user_message"], "Why is the last item crashing?")
+        self.assertEqual(generator.calls[0]["chat_history"], [{"role": "student", "content": "I think the loop is fine."}])
         self.assertEqual(generator.calls[0]["reasoning_summary"], "The loop likely runs one step too far.")
         self.assertEqual(generator.calls[0]["n"], 2)
         self.assertNotIn("RAG", verifier.calls[0]["context"])
-
