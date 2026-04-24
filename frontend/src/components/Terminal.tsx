@@ -5,13 +5,22 @@ interface TerminalProps {
 
 export default function Terminal({ output, error }: TerminalProps) {
   return (
-    <div className="glass-panel p-4 h-full">
-      <div className="text-xs uppercase tracking-[0.2em] text-dune/50">Terminal</div>
-      <pre className="mt-3 whitespace-pre-wrap text-sm text-dune/80 min-h-[120px]">
-        {output || "Run code to see output."}
+    <div className="terminal-shell h-full">
+      <div className="terminal-head flex items-center justify-between px-4 py-2">
+        <span className="text-[11px] font-mono uppercase tracking-[0.24em] text-white/40">Console Output</span>
+        <div className="flex gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-red-500/25" />
+          <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/25" />
+          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/25" />
+        </div>
+      </div>
+      <pre className="console-good min-h-[140px] whitespace-pre-wrap p-4 font-['Geist_Mono'] text-xs leading-6">
+        {output || "// Output will appear here..."}
       </pre>
       {error && (
-        <pre className="mt-3 whitespace-pre-wrap text-sm text-ember/90">{error}</pre>
+        <pre className="console-bad whitespace-pre-wrap border-t border-white/5 px-4 py-3 font-['Geist_Mono'] text-xs leading-6">
+          {error}
+        </pre>
       )}
     </div>
   );

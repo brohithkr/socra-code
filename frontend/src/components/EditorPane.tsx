@@ -16,7 +16,7 @@ const languageMap: Record<Language, string> = {
 
 export default function EditorPane({ language, code, onChange, height = "420px" }: EditorPaneProps) {
   return (
-    <div className="monaco-wrap shadow-glow">
+    <div className="monaco-wrap h-full">
       <Editor
         height={height}
         language={languageMap[language]}

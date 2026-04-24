@@ -34,6 +34,35 @@ def _extract_tag(doc: str, tag: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def _python_to_java(python_code: str) -> str:
+    """Convert Python code to Java template for display."""
+    java_template = """public class Solution {
+  public static void main(String[] args) {
+    // Convert your Python logic here
+    // Python code reference:
+    // """ + python_code.replace("\n", "\n    // ") + """
+  }
+}
+"""
+    return java_template
+
+
+def _python_to_cpp(python_code: str) -> str:
+    """Convert Python code to C++ template for display."""
+    cpp_template = """#include <iostream>
+using namespace std;
+
+int main() {
+  // Convert your Python logic here
+  // Python code reference:
+  // """ + python_code.replace("\n", "\n  // ") + """
+  
+  return 0;
+}
+"""
+    return cpp_template
+
+
 def treeinstruct_problems(root: Path) -> Iterator[Problem]:
     for path in root.rglob("*.py"):
         if ".git" in path.parts:
@@ -55,6 +84,8 @@ def treeinstruct_problems(root: Path) -> Iterator[Problem]:
             continue
         title = problem.splitlines()[0].strip() if problem else path.stem
         pid = f"treeinstruct:{_slug(path)}"
+        
+        # Yield Python version
         yield Problem(
             problem_id=pid,
             title=title,
@@ -62,6 +93,38 @@ def treeinstruct_problems(root: Path) -> Iterator[Problem]:
             statement=problem,
             starter_code=code,
             buggy_code=code,
+            bug_desc=bug_desc or None,
+            bug_fixes=bug_fixes or None,
+            topic=path.parent.name,
+            source="treeinstruct",
+            kind="buggy",
+        )
+        
+        # Yield Java version (converted)
+        java_code = _python_to_java(code)
+        yield Problem(
+            problem_id=f"{pid}:java",
+            title=title,
+            language="java",
+            statement=problem,
+            starter_code=java_code,
+            buggy_code=java_code,
+            bug_desc=bug_desc or None,
+            bug_fixes=bug_fixes or None,
+            topic=path.parent.name,
+            source="treeinstruct",
+            kind="buggy",
+        )
+        
+        # Yield C++ version (converted)
+        cpp_code = _python_to_cpp(code)
+        yield Problem(
+            problem_id=f"{pid}:cpp",
+            title=title,
+            language="cpp",
+            statement=problem,
+            starter_code=cpp_code,
+            buggy_code=cpp_code,
             bug_desc=bug_desc or None,
             bug_fixes=bug_fixes or None,
             topic=path.parent.name,

@@ -6,3 +6,5 @@ frontend/dist/
 backend/rag/index/
 backend/problems/data/
 uv.lock
+.env
+.env.local

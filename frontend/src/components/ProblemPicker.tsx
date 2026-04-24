@@ -9,7 +9,7 @@ interface ProblemPickerProps {
 export default function ProblemPicker({ problems, selectedId, onSelect }: ProblemPickerProps) {
   return (
     <select
-      className="rounded-full border border-dune/20 bg-transparent px-4 py-2 text-sm"
+      className="ui-select rounded-xl px-4 py-2.5 text-sm"
       value={selectedId ?? ""}
       onChange={(e) => onSelect(e.target.value)}
     >
