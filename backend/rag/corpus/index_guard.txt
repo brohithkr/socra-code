@@ -1,7 +1,0 @@
-# Guarding index access
-if idx < 0 or idx >= len(items):
-    raise IndexError("out of range")
-
-# Check list length before indexing
-if not items:
-    return None

@@ -112,14 +112,13 @@ export default function App() {
   const handleHint = async () => {
     setAnalyzing(true);
     try {
-      const result = await requestHint(language, code, runResult?.stderr, history);
+      const output = runResult ? (runResult.stdout + runResult.stderr).trim() || undefined : undefined;
+      const result = await requestHint(language, code, output, history);
       setHint(result);
       setHistory((prev: string[]) => [...prev, result.hint]);
     } catch (err) {
       setHint({
         hint: err instanceof Error ? err.message : "Hint failed",
-        intent: "error",
-        score: 0,
       });
     } finally {
       setAnalyzing(false);
@@ -179,7 +178,7 @@ export default function App() {
     if (!roomState) return;
     sendGameMessage({
       type: "hint_request",
-      payload: { code: roomState.code, language: roomState.language, error: gameRun?.stderr, history: [] },
+      payload: { code: roomState.code, language: roomState.language, output: gameRun ? (gameRun.stdout + gameRun.stderr).trim() || undefined : undefined, history: [] },
     });
   };
 

@@ -19,8 +19,8 @@ class Planner:
     def __init__(self, router: LLMRouter) -> None:
         self.router = router
 
-    async def plan(self, code: str, error: str | None, history: List[str], knowledge_state: dict) -> Plan:
-        prompt = self._build_prompt(code, error, history, knowledge_state)
+    async def plan(self, code: str, output: str | None, history: List[str], knowledge_state: dict) -> Plan:
+        prompt = self._build_prompt(code, output, history, knowledge_state)
         system = "You are a tutoring planner that outputs JSON only."
         try:
             outputs = await self.router.complete(role="planner", system=system, prompt=prompt, n=1, temperature=0.2)
@@ -32,14 +32,14 @@ class Planner:
                 target_concept=plan_json.get("target_concept", "logic"),
             )
         except Exception:
-            return self._fallback_plan(code, error, history)
+            return self._fallback_plan(code, output, history)
 
-    def _build_prompt(self, code: str, error: str | None, history: List[str], knowledge_state: dict) -> str:
-        error_block = error or "(no runtime error)"
+    def _build_prompt(self, code: str, output: str | None, history: List[str], knowledge_state: dict) -> str:
+        output_block = output or "(no runtime output)"
         return (
-            "Analyze the student's code and error.\n"
+            "Analyze the student's code and output.\n"
             "Return JSON with keys: bug_class, hint_level, strategy, target_concept.\n"
-            f"Error: {error_block}\n"
+            f"Output: {output_block}\n"
             f"History length: {len(history)}\n"
             f"Knowledge state: {json.dumps(knowledge_state)}\n"
             "Code:\n"
@@ -53,11 +53,11 @@ class Planner:
             raise ValueError("No JSON found")
         return json.loads(text[start : end + 1])
 
-    def _fallback_plan(self, code: str, error: str | None, history: List[str]) -> Plan:
+    def _fallback_plan(self, code: str, output: str | None, history: List[str]) -> Plan:
         bug_class = "logic"
         target = "flow"
-        if error:
-            lowered = error.lower()
+        if output:
+            lowered = output.lower()
             if "index" in lowered or "out of range" in lowered:
                 bug_class = "off-by-one"
                 target = "loop boundary"

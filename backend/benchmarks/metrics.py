@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
 import numpy as np
 
-from ..rag.embeddings import EmbeddingModel
+from .embeddings import EmbeddingModel
 
 
 WORD_RE = re.compile(r"[a-zA-Z_]+")

@@ -14,12 +14,11 @@ class Generator:
         self,
         plan: Plan,
         code: str,
-        error: str | None,
-        rag_snippets: List[str],
+        output: str | None,
         reasoning_summary: str,
         n: int = 5,
     ) -> List[str]:
-        prompt = self._build_prompt(plan, code, error, rag_snippets, reasoning_summary)
+        prompt = self._build_prompt(plan, code, output, reasoning_summary)
         system = "You are a Socratic coding tutor. Ask one guiding question."
         return await self.router.complete(role="tutor", system=system, prompt=prompt, n=n, temperature=0.7)
 
@@ -27,12 +26,10 @@ class Generator:
         self,
         plan: Plan,
         code: str,
-        error: str | None,
-        rag_snippets: List[str],
+        output: str | None,
         reasoning_summary: str,
     ) -> str:
-        rag_block = "\n\n".join(rag_snippets) if rag_snippets else "(none)"
-        error_block = error or "(no runtime error)"
+        output_block = output or "(no runtime output)"
         return (
             "You are a Socratic tutor. Use questioning strategies like:\n"
             "- Situational probing\n"
@@ -40,11 +37,9 @@ class Generator:
             "- Metacognitive reflection\n"
             "Rules: Ask ONE question. No direct fixes. No code dumps.\n\n"
             f"Plan: bug_class={plan.bug_class}, target={plan.target_concept}, strategy={plan.strategy}.\n"
-            f"Error: {error_block}\n"
+            f"Output: {output_block}\n"
             f"Reasoning summary: {reasoning_summary}\n"
             "Code:\n"
             f"{code}\n"
-            "RAG snippets (internal context):\n"
-            f"{rag_block}\n"
             "Return only the question."
         )

@@ -5,10 +5,9 @@ import json
 from pathlib import Path
 import asyncio
 
-from ..config import settings
 from ..deps import get_pipeline
 from ..models.router import LLMRouter
-from ..rag.embeddings import EmbeddingModel
+from .embeddings import EmbeddingModel
 from .datasets import load_treeinstruct
 from .tasks import evaluate_treeinstruct
 
@@ -21,7 +20,7 @@ async def run(
 ) -> dict:
     pipeline = get_pipeline()
     router = LLMRouter()
-    embedder = EmbeddingModel(settings.embed_model)
+    embedder = EmbeddingModel()
 
     if dataset == "treeinstruct":
         items = load_treeinstruct(settings.problems_path, limit=limit)

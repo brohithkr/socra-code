@@ -8,3 +8,5 @@ backend/problems/data/
 uv.lock
 .env
 .env.local
+# Added by code-review-graph
+.code-review-graph/

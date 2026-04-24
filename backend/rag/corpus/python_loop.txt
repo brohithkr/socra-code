@@ -1,6 +1,0 @@
-# Python loop boundary example
-for i in range(n):
-    # i goes from 0 to n-1
-    total += values[i]
-
-# Common off-by-one: using range(n+1) when values has length n

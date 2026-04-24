@@ -10,8 +10,6 @@ export interface RunResult {
 
 export interface HintResult {
   hint: string;
-  intent: string;
-  score: number;
 }
 
 export interface RoomState {

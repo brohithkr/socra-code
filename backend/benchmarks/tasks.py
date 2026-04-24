@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Dict, List
 
-from ..config import settings
 from ..core.pipeline import HintPipeline
 from ..models.router import LLMRouter
-from ..rag.embeddings import EmbeddingModel
+from .embeddings import EmbeddingModel
 from .metrics import token_f1, socratic_compliance, contains_code, embed_similarity
 
 

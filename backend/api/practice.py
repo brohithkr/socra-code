@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import httpx
 from fastapi import APIRouter, Depends
+from fastapi import HTTPException
 
 from ..execution.runner import run_code
 from ..schemas import RunRequest, RunResponse, HintRequest, HintResponse
@@ -29,10 +31,17 @@ async def run_endpoint(request: RunRequest):
 @router.post("/hint", response_model=HintResponse)
 async def hint_endpoint(request: HintRequest, pipeline: HintPipeline = Depends(get_pipeline)):
     session_id = request.session_id or "practice"
-    hint, plan, score = await pipeline.run(
-        code=request.code,
-        error=request.error,
-        history=request.history,
-        session_id=session_id,
-    )
-    return HintResponse(hint=hint, intent=plan.target_concept, score=score)
+    try:
+        hint, _plan, _score = await pipeline.run(
+            code=request.code,
+            output=request.output,
+            history=request.history,
+            session_id=session_id,
+        )
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else 502
+        raise HTTPException(
+            status_code=502,
+            detail=f"LLM provider request failed with status {status_code}.",
+        ) from exc
+    return HintResponse(hint=hint)

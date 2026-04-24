@@ -75,11 +75,11 @@ async def websocket_endpoint(
             elif msg_type == "hint_request":
                 code = payload.get("code", "")
                 language = payload.get("language", "python")
-                error = payload.get("error")
+                output = payload.get("output")
                 history = payload.get("history", [])
-                hint, plan, score = await pipeline.run(
+                hint, _plan, _score = await pipeline.run(
                     code=code,
-                    error=error,
+                    output=output,
                     history=history,
                     session_id=room_id,
                 )
@@ -91,8 +91,6 @@ async def websocket_endpoint(
                         "type": "hint_result",
                         "payload": {
                             "hint": hint,
-                            "intent": plan.target_concept,
-                            "score": score,
                             "language": language,
                         },
                     },

@@ -21,15 +21,13 @@ class RunResponse(BaseModel):
 class HintRequest(BaseModel):
     language: str
     code: str
-    error: Optional[str] = None
+    output: Optional[str] = None
     history: List[str] = Field(default_factory=list)
     session_id: Optional[str] = None
 
 
 class HintResponse(BaseModel):
     hint: str
-    intent: str
-    score: float
 
 
 class CreateGameRequest(BaseModel):

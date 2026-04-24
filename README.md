@@ -5,21 +5,44 @@ A Socratic code tutoring system with a multiplayer coding game.
 ## Stack
 
 Frontend: React (Vite + Bun) + Tailwind + Monaco editor
-Backend: Python FastAPI + WebSockets + FAISS RAG
+Backend: Python FastAPI + WebSockets + prompt-driven tutoring pipeline
 
-## Setup
+## Run The App
 
-### Backend (uv)
+### 1. Configure the backend
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+For the fastest local startup, open `backend/.env` and set:
+
+```env
+LLM_PROVIDER=mock
+RUNNER_MODE=local
+```
+
+Use a real hosted model instead of `mock` only if you want live LLM responses. In that case, set `LLM_PROVIDER` to `openrouter`, `groq`, or `huggingface` and provide the matching API key.
+
+### 2. Start the backend
 
 ```bash
 uv venv
 uv sync
-uv run python -m backend.rag.ingest --code-kb backend/codeKnowledgebase --index-dir backend/rag/index
-uv run python -m backend.problems.ingest --code-kb backend/codeKnowledgebase --output backend/problems/data/problems.jsonl
 uv run uvicorn backend.main:app --reload --port 8000
 ```
 
-### Frontend
+The backend runs at `http://localhost:8000`.
+
+Note:
+- If `backend/problems/data/problems.jsonl` does not exist yet, the backend will build it automatically on first startup.
+- If you prefer to prebuild it manually, run:
+
+```bash
+uv run python -m backend.problems.ingest --code-kb backend/codeKnowledgebase --output backend/problems/data/problems.jsonl
+```
+
+### 3. Start the frontend
 
 ```bash
 cd frontend
@@ -36,7 +59,7 @@ Copy `frontend/.env.example` to `.env` if your API base URL is different.
 
 Key variables:
 
-- `LLM_PROVIDER=openrouter|groq|huggingface`
+- `LLM_PROVIDER=mock|openrouter|groq|huggingface`
 - `LLM_MODEL=openrouter/free`
 - `OPENROUTER_API_KEY=...`
 - `HF_API_KEY=...`
@@ -46,16 +69,15 @@ Key variables:
 - `CONTAINER_RUNTIME=docker|podman`
 - `RUNNER_FALLBACK_TO_LOCAL=true|false`
 - `CODE_KB_DIR=backend/codeKnowledgebase`
-- `RAG_INDEX_DIR=backend/rag/index`
-- `EMBED_MODEL=intfloat/e5-base-v2`
 
 ## Notes
 
 - `backend/.env` is loaded automatically on backend startup.
 - Container sandbox is the default for Python/Java/C++ execution.
+- For the simplest local setup with no container runtime, set `RUNNER_MODE=local`.
 - To require containerized execution with no local fallback, set `RUNNER_MODE=docker` and `RUNNER_FALLBACK_TO_LOCAL=false`.
 - To use Podman for code execution, set `CONTAINER_RUNTIME=podman`.
-- The RAG index is built from `backend/codeKnowledgebase`.
+- The problem bank is built from `backend/codeKnowledgebase`.
 - Benchmarks are offline and run from `backend/benchmarks`.
 
 ## Benchmark

@@ -14,11 +14,11 @@ export async function runCode(language: Language, code: string, stdin?: string):
   return resp.json();
 }
 
-export async function requestHint(language: Language, code: string, error?: string, history: string[] = []): Promise<HintResult> {
+export async function requestHint(language: Language, code: string, output?: string, history: string[] = []): Promise<HintResult> {
   const resp = await fetch(`${API_URL}/hint`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ language, code, error, history }),
+    body: JSON.stringify({ language, code, output, history }),
   });
   if (!resp.ok) {
     throw new Error("Hint failed");

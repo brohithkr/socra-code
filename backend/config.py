@@ -46,11 +46,6 @@ class Settings:
     redis_url: str | None = os.getenv("REDIS_URL")
 
     code_kb_dir: Path = Path(os.getenv("CODE_KB_DIR", str(BASE_DIR / "codeKnowledgebase")))
-    rag_index_dir: Path = Path(os.getenv("RAG_INDEX_DIR", str(BASE_DIR / "rag" / "index")))
-    embed_model: str = os.getenv("EMBED_MODEL", "intfloat/e5-base-v2")
-    rag_top_k: int = int(os.getenv("RAG_TOP_K", "4"))
-    rag_auto_build: bool = os.getenv("RAG_AUTO_BUILD", "true").lower() == "true"
-    rag_cache_size: int = int(os.getenv("RAG_CACHE_SIZE", "128"))
     hint_candidate_count: int = int(os.getenv("HINT_CANDIDATE_COUNT", "3"))
     verifier_parallelism: int = int(os.getenv("VERIFIER_PARALLELISM", "3"))
 
