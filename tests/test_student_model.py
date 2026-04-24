@@ -14,20 +14,17 @@ class StudentModelStoreTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_note_hint_decreases_mastery(self) -> None:
         store = StudentModelStore()
-        # Build up mastery first; mastery is clamped to [0.0, 1.0],
-        # so we need a positive baseline to observe a decrease.
-        await store.note_progress("s1", "loop_boundary")
-        await store.note_progress("s1", "loop_boundary")
         await store.note_hint("s1", "loop_boundary")
         snap = await store.snapshot("s1")
-        # 0.08 + 0.08 - 0.05 = 0.11
-        self.assertAlmostEqual(snap["loop_boundary"], 0.11)
+        # Baseline 0.5 - 0.05 = 0.45
+        self.assertAlmostEqual(snap["loop_boundary"], 0.45)
 
     async def test_note_progress_increases_mastery(self) -> None:
         store = StudentModelStore()
         await store.note_progress("s1", "loop_boundary")
         snap = await store.snapshot("s1")
-        self.assertAlmostEqual(snap["loop_boundary"], 0.08)
+        # Baseline 0.5 + 0.08 = 0.58
+        self.assertAlmostEqual(snap["loop_boundary"], 0.58)
 
     async def test_mastery_clamped_to_unit_interval(self) -> None:
         store = StudentModelStore()
@@ -51,6 +48,14 @@ class StudentModelStoreTests(unittest.IsolatedAsyncioTestCase):
         m2 = await store.get_or_create("s1")
         self.assertIs(m1, m2)
         self.assertIsInstance(m1, StudentModel)
+
+    async def test_snapshot_returns_copy_not_live_dict(self) -> None:
+        store = StudentModelStore()
+        await store.note_progress("s1", "x")
+        snap = await store.snapshot("s1")
+        snap["x"] = 999.0
+        snap2 = await store.snapshot("s1")
+        self.assertNotEqual(snap2["x"], 999.0)
 
     async def test_student_model_has_socratic_fields(self) -> None:
         store = StudentModelStore()

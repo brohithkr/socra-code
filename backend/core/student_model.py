@@ -41,8 +41,8 @@ class StudentModelStore:
 
     async def snapshot(self, session_id: str) -> Dict[str, float]:
         """Return a copy of the mastery dict for compatibility with HintPipeline."""
-        model = await self.get_or_create(session_id)
         async with self._lock:
+            model = self._models.setdefault(session_id, StudentModel())
             return dict(model.mastery)
 
     async def note_hint(self, session_id: str, concept: str) -> None:
@@ -52,7 +52,7 @@ class StudentModelStore:
         await self._update(session_id, concept, 0.08)
 
     async def _update(self, session_id: str, concept: str, delta: float) -> None:
-        model = await self.get_or_create(session_id)
         async with self._lock:
-            current = model.mastery.get(concept, 0.0)
+            model = self._models.setdefault(session_id, StudentModel())
+            current = model.mastery.get(concept, 0.5)
             model.mastery[concept] = max(0.0, min(1.0, current + delta))
