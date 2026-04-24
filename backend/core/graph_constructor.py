@@ -65,7 +65,10 @@ class GraphConstructor:
             )
             parsed = parse_json(outputs[0])
             return self._validate(parsed)
-        except Exception:
+        except (ValueError, KeyError, TypeError) as exc:
+            # Known recoverable errors: bad JSON, missing fields, wrong types.
+            # Re-raises any unexpected exception so it surfaces during testing.
+            _ = exc
             return self._fallback(problem)
 
     def _validate(self, data: Dict[str, Any]) -> MisconceptionGraph:
@@ -73,13 +76,16 @@ class GraphConstructor:
         valid_nodes: List[MisconceptionNode] = []
         for raw in raw_nodes:
             try:
+                node_type = str(raw.get("type", "conceptual"))
+                if node_type not in ("conceptual", "syntactical"):
+                    node_type = "conceptual"
                 valid_nodes.append(
                     MisconceptionNode(
                         id=str(raw["id"]),
                         name=str(raw.get("name", raw["id"])),
                         description=str(raw.get("description", "")),
                         concept=str(raw.get("concept", "general")),
-                        type=str(raw.get("type", "conceptual")),  # type: ignore[arg-type]
+                        type=node_type,  # type: ignore[arg-type]
                     )
                 )
             except (KeyError, TypeError):

@@ -63,8 +63,10 @@ class GraphConstructorTests(unittest.IsolatedAsyncioTestCase):
         router = FakeRouter(responses=[response])
         gc = GraphConstructor(router=router)
         graph = await gc.build(SAMPLE_PROBLEM)
-        # At least one cycle edge must be removed
-        self.assertLess(len(graph.edges), 2)
+        # Greedy DFS accepts A->B (first), rejects B->A (would create cycle).
+        self.assertEqual(len(graph.edges), 1)
+        self.assertEqual(graph.edges[0].source, "A")
+        self.assertEqual(graph.edges[0].target, "B")
 
     async def test_filters_orphan_edges(self) -> None:
         response = json.dumps({
