@@ -6,7 +6,7 @@ from .planner import Planner, Plan
 from .generator import Generator
 from .verifier import Verifier
 from .reasoner import Reasoner
-from .knowledge_tracer import KnowledgeTracer
+from .student_model import StudentModelStore
 
 
 class ChatTurn(Protocol):
@@ -21,13 +21,13 @@ class HintPipeline:
         reasoner: Reasoner,
         generator: Generator,
         verifier: Verifier,
-        tracer: KnowledgeTracer,
+        student_store: StudentModelStore,
     ) -> None:
         self.planner = planner
         self.reasoner = reasoner
         self.generator = generator
         self.verifier = verifier
-        self.tracer = tracer
+        self.student_store = student_store
 
     async def run(
         self,
@@ -41,7 +41,7 @@ class HintPipeline:
         verifier_use_llm: bool = True,
     ) -> Tuple[str, Plan, float]:
         chat_history = chat_history or []
-        knowledge_state = await self.tracer.snapshot(session_id)
+        knowledge_state = await self.student_store.snapshot(session_id)
         plan = await self.planner.plan(
             code=code,
             output=output,
@@ -72,5 +72,5 @@ class HintPipeline:
         scored = await self.verifier.score(candidates, context=context, use_llm=verifier_use_llm)
         scored.sort(key=lambda x: x[1], reverse=True)
         best_hint, best_score = scored[0]
-        await self.tracer.note_hint(session_id, plan.target_concept)
+        await self.student_store.note_hint(session_id, plan.target_concept)
         return best_hint, plan, best_score

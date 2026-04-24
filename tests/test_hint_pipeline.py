@@ -105,7 +105,7 @@ class FakeVerifier:
         return [(candidates[0], 7.2), (candidates[1], 6.1)]
 
 
-class FakeTracer:
+class FakeStudentStore:
     def __init__(self) -> None:
         self.snapshots = []
         self.hints = []
@@ -124,8 +124,8 @@ class HintPipelineTests(unittest.IsolatedAsyncioTestCase):
         reasoner = FakeReasoner()
         generator = FakeGenerator()
         verifier = FakeVerifier()
-        tracer = FakeTracer()
-        pipeline = HintPipeline(planner, reasoner, generator, verifier, tracer)
+        student_store = FakeStudentStore()
+        pipeline = HintPipeline(planner, reasoner, generator, verifier, student_store)
 
         hint, plan, score = await pipeline.run(
             code="for i in range(len(values) + 1): pass",
@@ -141,8 +141,8 @@ class HintPipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(hint, "What happens when the loop reaches the final index?")
         self.assertEqual(score, 7.2)
         self.assertEqual(plan.target_concept, "loop boundary")
-        self.assertEqual(tracer.snapshots, ["practice"])
-        self.assertEqual(tracer.hints, [("practice", "loop boundary")])
+        self.assertEqual(student_store.snapshots, ["practice"])
+        self.assertEqual(student_store.hints, [("practice", "loop boundary")])
         self.assertEqual(planner.calls[0]["knowledge_state"], {"loop boundary": 0.4})
         self.assertEqual(reasoner.calls[0]["output"], "IndexError: list index out of range")
         self.assertEqual(reasoner.calls[0]["user_message"], "Why is the last item crashing?")
