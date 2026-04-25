@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol
 
@@ -11,6 +12,8 @@ from .question_generator import QuestionGenerator
 from .response_evaluator import ResponseEvaluator
 from .student_model import StudentModelStore
 from .traversal_engine import TraversalEngine
+
+logger = logging.getLogger(__name__)
 
 
 class ChatTurn(Protocol):
@@ -84,6 +87,7 @@ class SocraticPipeline:
                 student.hint_level = 0
                 student.last_question = None
                 student.current_node_id = self.traversal.pick_next(student.graph, set())
+                _log_graph_built(session_id, problem_id, student.graph)
 
             graph: MisconceptionGraph = student.graph
 
@@ -95,6 +99,10 @@ class SocraticPipeline:
                         node=node,
                         previous_question=student.last_question,
                         student_response=user_message,
+                    )
+                    logger.info(
+                        "socratic.evaluate session=%s node=%s understanding=%s",
+                        session_id, node.id, result.understanding,
                     )
                     if result.understanding == "strong":
                         student.resolved_node_ids.add(student.current_node_id)
@@ -116,10 +124,20 @@ class SocraticPipeline:
             if student.current_node_id is None:
                 progress = {"resolved": resolved_count, "total": total, "level": 0}
                 student.last_question = None
+                logger.info(
+                    "socratic.completed session=%s problem=%s resolved=%d/%d",
+                    session_id, problem_id, resolved_count, total,
+                )
                 return SocraticResult(hint=COMPLETION_MESSAGE, progress=progress)
 
             current_node = graph.node(student.current_node_id)
             assert current_node is not None  # invariant: pick_next returns valid id
+
+            logger.info(
+                "socratic.turn session=%s problem=%s node=%s(%s) level=%d resolved=%d/%d",
+                session_id, problem_id, current_node.id, current_node.name,
+                student.hint_level, resolved_count, total,
+            )
 
             question = await self.question_generator.generate(
                 node=current_node,
@@ -137,3 +155,14 @@ class SocraticPipeline:
                 "level": student.hint_level,
             }
             return SocraticResult(hint=question, progress=progress)
+
+
+def _log_graph_built(session_id: str, problem_id: str, graph: MisconceptionGraph) -> None:
+    nodes_repr = ", ".join(f"{n.id}={n.name!r}({n.concept})" for n in graph.nodes)
+    edges_repr = ", ".join(f"{e.source}->{e.target}[{e.type}]" for e in graph.edges) or "(none)"
+    logger.info(
+        "socratic.graph_built session=%s problem=%s nodes=%d edges=%d",
+        session_id, problem_id, len(graph.nodes), len(graph.edges),
+    )
+    logger.info("socratic.graph_built.nodes session=%s %s", session_id, nodes_repr)
+    logger.info("socratic.graph_built.edges session=%s %s", session_id, edges_repr)
