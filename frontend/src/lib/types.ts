@@ -8,8 +8,16 @@ export interface RunResult {
   duration_ms: number;
 }
 
+export interface HintProgress {
+  resolved: number;
+  total: number;
+  level: number;
+}
+
 export interface HintResult {
   hint: string;
+  mode?: "classic" | "socratic";
+  progress?: HintProgress;
 }
 
 export interface ChatMessage {

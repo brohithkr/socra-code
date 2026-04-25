@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import TopBar from "./components/TopBar";
 import ModeCard from "./components/ModeCard";
@@ -6,7 +6,7 @@ import EditorPane from "./components/EditorPane";
 import Terminal from "./components/Terminal";
 import TutorChatPanel from "./components/TutorChatPanel";
 import Scoreboard from "./components/Scoreboard";
-import { createGame, fetchProblem, fetchProblems, fetchRoom, requestHint, runCode, sendTutorChat } from "./lib/api";
+import { createGame, fetchProblem, fetchProblems, fetchRoom, runCode, sendTutorChat } from "./lib/api";
 import type { ChatMessage, HintResult, Language, RoomState, RunResult, WsMessage, ProblemDetail, ProblemSummary } from "./lib/types";
 import { createRoomSocket } from "./lib/ws";
 
@@ -58,6 +58,28 @@ export default function App() {
   const [problems, setProblems] = useState<ProblemSummary[]>([]);
   const [selectedProblemId, setSelectedProblemId] = useState<string>("");
   const [problemDetail, setProblemDetail] = useState<ProblemDetail | null>(null);
+  const [sessionId, setSessionId] = useState<string>(() => makeId());
+  const [terminalHeight, setTerminalHeight] = useState<number>(192);
+
+  const handleTerminalResize = (event: ReactMouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = terminalHeight;
+    const onMove = (moveEvent: MouseEvent) => {
+      const next = startHeight + (startY - moveEvent.clientY);
+      setTerminalHeight(Math.max(80, Math.min(600, next)));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  };
 
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [roomId, setRoomId] = useState<string>("");
@@ -102,6 +124,7 @@ export default function App() {
         setHint(null);
         setChatMessages([]);
         setChatInput("");
+        setSessionId(makeId());
       })
       .catch(() => {
         setProblemDetail(null);
@@ -136,7 +159,17 @@ export default function App() {
     setAnalyzing(true);
     try {
       const output = runResult ? (runResult.stdout + runResult.stderr).trim() || undefined : undefined;
-      const result = await requestHint(language, code, output, history);
+      // Route through /chat so that problem_id (and thus socratic mode) is honored.
+      const result = await sendTutorChat(
+        language,
+        code,
+        "",
+        sessionId,
+        selectedProblemId || undefined,
+        output,
+        history,
+        chatMessages,
+      );
       setHint(result);
       setHistory((prev: string[]) => [...prev, result.hint]);
       setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
@@ -160,7 +193,16 @@ export default function App() {
     setChatting(true);
 
     try {
-      const result = await sendTutorChat(language, code, userMessage, output, history, chatMessages);
+      const result = await sendTutorChat(
+        language,
+        code,
+        userMessage,
+        sessionId,
+        selectedProblemId || undefined,
+        output,
+        history,
+        chatMessages,
+      );
       setHint(result);
       setHistory((prev: string[]) => [...prev, result.hint]);
       setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
@@ -313,6 +355,7 @@ export default function App() {
                   setHint(null);
                   setChatMessages([]);
                   setChatInput("");
+                  setSessionId(makeId());
                 }
               : undefined
           }
@@ -397,7 +440,12 @@ export default function App() {
               <div className="relative min-h-0 flex-1 overflow-hidden bg-neutral-900">
                 <EditorPane language={language} code={code} onChange={setCode} height="100%" />
               </div>
-              <div className="h-48 flex-none border-t border-white/5">
+              <div
+                className="h-1 flex-none cursor-row-resize bg-white/5 hover:bg-blue-500/40 transition-colors"
+                onMouseDown={handleTerminalResize}
+                title="Drag to resize"
+              />
+              <div className="flex-none border-t border-white/5" style={{ height: terminalHeight }}>
                 <Terminal output={runResult?.stdout ?? ""} error={runResult?.stderr} />
               </div>
             </div>

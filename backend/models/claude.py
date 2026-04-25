@@ -16,7 +16,9 @@ class ClaudeProvider(BaseLLMProvider):
         user_messages = [m for m in messages if m["role"] != "system"]
         prompt = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in user_messages)
 
-        env = {"ANTHROPIC_API_KEY": self.api_key} if self.api_key else None
+        env = {}
+        if self.api_key:
+            env["ANTHROPIC_API_KEY"] = self.api_key
 
         results = []
         for _ in range(n):

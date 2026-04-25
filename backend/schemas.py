@@ -31,10 +31,13 @@ class HintRequest(BaseModel):
     user_message: Optional[str] = None
     chat_history: List[ChatMessage] = Field(default_factory=list)
     session_id: Optional[str] = None
+    problem_id: Optional[str] = None
 
 
 class HintResponse(BaseModel):
     hint: str
+    mode: Optional[str] = None  # "classic" | "socratic"
+    progress: Optional[Dict[str, int]] = None  # {"resolved": int, "total": int, "level": int}
 
 
 class CreateGameRequest(BaseModel):
