@@ -28,6 +28,7 @@ export default function EditorPane({ language, code, onChange, height = "420px" 
           fontSize: 14,
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
+          padding: { top: 14, bottom: 14 },
         }}
       />
     </div>

@@ -4,22 +4,42 @@ interface ScoreboardProps {
   hints: Record<string, number>;
 }
 
+const RANK_LABELS = ["1", "2", "3"];
+
 export default function Scoreboard({ players, scores, hints }: ScoreboardProps) {
-  const entries = Object.entries(players);
+  const entries = Object.entries(players)
+    .map(([id, name]) => ({ id, name, score: scores[id] ?? 0, hints: hints[id] ?? 0 }))
+    .sort((a, b) => b.score - a.score);
+
   return (
-    <div className="glass-panel p-5">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-white/42">Scoreboard</div>
-      <div className="mt-4 space-y-3">
-        {entries.length === 0 && <div className="text-sm text-white/55">No players yet.</div>}
-        {entries.map(([id, name]) => (
-          <div key={id} className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm">
-            <div>
-              <div className="font-medium text-white">{name}</div>
-              <div className="text-xs text-white/48">Hints: {hints[id] ?? 0}</div>
-            </div>
-            <div className="text-xl font-semibold tracking-tight text-blue-300">{scores[id] ?? 0}</div>
+    <div className="scoreboard">
+      <div className="panel-header">
+        <div className="panel-icon" style={{ background: "var(--ember-soft)", color: "var(--ember)" }}>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6L8 1Z" />
+          </svg>
+        </div>
+        <span className="panel-header-title">Scoreboard</span>
+      </div>
+      <div>
+        {entries.length === 0 ? (
+          <div style={{ padding: "18px 16px", fontSize: "12px", color: "var(--text-3)" }}>
+            No players yet — waiting for connections…
           </div>
-        ))}
+        ) : (
+          entries.map((entry, i) => (
+            <div key={entry.id} className="score-row">
+              <span className={`score-rank ${i < 3 ? `rank-${i + 1}` : ""}`}>
+                {RANK_LABELS[i] ?? i + 1}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="score-name">{entry.name}</div>
+                <div className="score-hints">{entry.hints} hint{entry.hints !== 1 ? "s" : ""} used</div>
+              </div>
+              <div className="score-val">{entry.score}</div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

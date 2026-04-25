@@ -6,6 +6,7 @@ import EditorPane from "./components/EditorPane";
 import Terminal from "./components/Terminal";
 import TutorChatPanel from "./components/TutorChatPanel";
 import Scoreboard from "./components/Scoreboard";
+import AboutPage from "./components/AboutPage";
 import { createGame, fetchProblem, fetchProblems, fetchRoom, runCode, sendTutorChat } from "./lib/api";
 import type { ChatMessage, HintResult, Language, RoomState, RunResult, WsMessage, ProblemDetail, ProblemSummary } from "./lib/types";
 import { createRoomSocket } from "./lib/ws";
@@ -31,18 +32,32 @@ function makeId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const PlayIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+    <path d="M2.5 1.5L10 6L2.5 10.5V1.5Z" />
+  </svg>
+);
+
+const SparkleIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" />
+  </svg>
+);
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const mode: "home" | "practice" | "game" | null =
+  const mode: "home" | "practice" | "game" | "about" | null =
     location.pathname === "/"
       ? "home"
       : location.pathname === "/practice"
         ? "practice"
         : location.pathname === "/game"
           ? "game"
-          : null;
+          : location.pathname === "/about"
+            ? "about"
+            : null;
 
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState<string>(templates.python);
@@ -118,17 +133,14 @@ export default function App() {
         if (detail.language === "python" || detail.language === "java" || detail.language === "cpp") {
           setLanguage(detail.language);
         }
-        const nextCode = detail.buggy_code || detail.starter_code || templates.python;
-        setCode(nextCode);
+        setCode(detail.buggy_code || detail.starter_code || templates.python);
         setHistory([]);
         setHint(null);
         setChatMessages([]);
         setChatInput("");
         setSessionId(makeId());
       })
-      .catch(() => {
-        setProblemDetail(null);
-      });
+      .catch(() => setProblemDetail(null));
   }, [selectedProblemId]);
 
   const elapsed = useMemo(() => {
@@ -142,13 +154,7 @@ export default function App() {
       const result = await runCode(language, code);
       setRunResult(result);
     } catch (err) {
-      setRunResult({
-        ok: false,
-        stdout: "",
-        stderr: err instanceof Error ? err.message : "Run failed",
-        exit_code: 1,
-        duration_ms: 0,
-      });
+      setRunResult({ ok: false, stdout: "", stderr: err instanceof Error ? err.message : "Run failed", exit_code: 1, duration_ms: 0 });
     } finally {
       setRunning(false);
     }
@@ -171,7 +177,7 @@ export default function App() {
         chatMessages,
       );
       setHint(result);
-      setHistory((prev: string[]) => [...prev, result.hint]);
+      setHistory((prev) => [...prev, result.hint]);
       setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Hint failed";
@@ -185,13 +191,11 @@ export default function App() {
   const handleTutorChat = async () => {
     const userMessage = chatInput.trim();
     if (!userMessage || chatting || analyzing) return;
-
     const output = runResult ? (runResult.stdout + runResult.stderr).trim() || undefined : undefined;
     const nextMessages: ChatMessage[] = [...chatMessages, { role: "student", content: userMessage }];
     setChatMessages(nextMessages);
     setChatInput("");
     setChatting(true);
-
     try {
       const result = await sendTutorChat(
         language,
@@ -204,7 +208,7 @@ export default function App() {
         chatMessages,
       );
       setHint(result);
-      setHistory((prev: string[]) => [...prev, result.hint]);
+      setHistory((prev) => [...prev, result.hint]);
       setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Chat failed";
@@ -228,15 +232,9 @@ export default function App() {
     const socket = createRoomSocket(baseUrl, state.room_id, playerIdRef.current, playerName);
     socketRef.current = socket;
     socket.onMessage((message: WsMessage) => {
-      if (message.type === "room_state") {
-        setRoomState(message.payload.state as RoomState);
-      }
-      if (message.type === "code_update") {
-        setRoomState((prev: RoomState | null) => (prev ? { ...prev, code: message.payload.code } : prev));
-      }
-      if (message.type === "score_update") {
-        setRoomState((prev: RoomState | null) => (prev ? { ...prev, scores: message.payload.scores } : prev));
-      }
+      if (message.type === "room_state") setRoomState(message.payload.state as RoomState);
+      if (message.type === "code_update") setRoomState((prev) => prev ? { ...prev, code: message.payload.code } : prev);
+      if (message.type === "score_update") setRoomState((prev) => prev ? { ...prev, scores: message.payload.scores } : prev);
       if (message.type === "hint_result") {
         const payload = message.payload as HintResult;
         setGameHint(payload);
@@ -258,7 +256,7 @@ export default function App() {
       if (message.type === "error") {
         const payload = message.payload as { message?: string };
         if (payload.message && (gameChatting || gameAnalyzing)) {
-          setGameChatMessages((prev) => [...prev, { role: "tutor", content: payload.message }]);
+          setGameChatMessages((prev) => [...prev, { role: "tutor", content: payload.message! }]);
         }
         setGameChatting(false);
         setGameAnalyzing(false);
@@ -278,12 +276,10 @@ export default function App() {
     connectRoom(state);
   };
 
-  const sendGameMessage = (message: WsMessage) => {
-    socketRef.current?.send(message);
-  };
+  const sendGameMessage = (message: WsMessage) => socketRef.current?.send(message);
 
   const updateGameCode = (value: string) => {
-    setRoomState((prev: RoomState | null) => (prev ? { ...prev, code: value } : prev));
+    setRoomState((prev) => prev ? { ...prev, code: value } : prev);
     sendGameMessage({ type: "code_update", payload: { code: value } });
   };
 
@@ -312,7 +308,6 @@ export default function App() {
     if (!roomState) return;
     const userMessage = gameChatInput.trim();
     if (!userMessage || gameChatting || gameAnalyzing) return;
-
     setGameChatMessages((prev) => [...prev, { role: "student", content: userMessage }]);
     setGameChatInput("");
     setGameChatting(true);
@@ -329,164 +324,302 @@ export default function App() {
     });
   };
 
-  if (mode === null) {
-    return <Navigate to="/" replace />;
-  }
+  if (mode === null) return <Navigate to="/" replace />;
 
   return (
-    <div className="h-screen overflow-hidden p-0 text-white">
-      <div className="app-shell mx-auto flex h-full max-w-[1500px] flex-col overflow-hidden p-0">
-        <TopBar
-          mode={mode}
-          onBack={mode === "home" ? undefined : () => navigate("/")}
-          language={language}
-          onLanguageChange={setLanguage}
-          problems={problems}
-          selectedProblemId={selectedProblemId}
-          onProblemSelect={setSelectedProblemId}
-          onRun={mode === "practice" ? handleRun : undefined}
-          onAsk={mode === "practice" ? handleHint : undefined}
-          onClear={
-            mode === "practice"
-              ? () => {
-                  setSelectedProblemId("");
-                  setProblemDetail(null);
-                  setHistory([]);
-                  setHint(null);
-                  setChatMessages([]);
-                  setChatInput("");
-                  setSessionId(makeId());
-                }
-              : undefined
-          }
-          running={running}
-          analyzing={analyzing || chatting}
-        />
+    <div className="app-shell">
+      <TopBar
+        mode={mode ?? "home"}
+        onBack={mode === "home" || mode === null ? undefined : () => navigate("/")}
+        onAbout={mode === "home" ? () => navigate("/about") : undefined}
+        language={language}
+        onLanguageChange={setLanguage}
+        problems={problems}
+        selectedProblemId={selectedProblemId}
+        onProblemSelect={setSelectedProblemId}
+        onRun={mode === "practice" ? handleRun : undefined}
+        onAsk={mode === "practice" ? handleHint : undefined}
+        onClear={
+          mode === "practice"
+            ? () => {
+                setSelectedProblemId("");
+                setProblemDetail(null);
+                setHistory([]);
+                setHint(null);
+                setChatMessages([]);
+                setChatInput("");
+                setSessionId(makeId());
+              }
+            : undefined
+        }
+        running={running}
+        analyzing={analyzing || chatting}
+      />
 
-        {mode === "home" && (
-          <div className="grid flex-1 gap-0 overflow-auto p-0 xl:grid-cols-[1.1fr_0.9fr]">
-            <section className="glass-panel hero-grid soft-grid overflow-hidden p-6 md:p-8">
-              <div className="relative">
-                <div className="inline-flex rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.24em] text-blue-300">
-                  Socratic Tutor Workspace
-                </div>
-                <h1 className="mt-6 max-w-2xl text-4xl font-semibold tracking-tight text-white md:text-5xl">
-                  Practice debugging in a studio built for questions, not answers.
-                </h1>
-                <p className="mt-5 max-w-2xl text-base leading-8 text-white/65">
-                  Run code, inspect failures, and ask the tutor for guided hints inside a darker, focused coding workflow.
-                </p>
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <button
-                    className="ui-button rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(37,99,235,0.35)]"
-                    onClick={() => navigate("/practice")}
-                  >
-                    Open Practice Studio
-                  </button>
-                  <button
-                    className="ui-button rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white/85"
-                    onClick={() => navigate("/game")}
-                  >
-                    Open Multiplayer Room
-                  </button>
-                </div>
+      {/* ── Home ──────────────────────────────────────── */}
+      {mode === "home" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", flex: 1, overflow: "hidden" }}>
+          {/* Scrollable hero column */}
+          <section className="hero-section" style={{ overflowY: "auto", padding: "0" }}>
+            <div className="hero-grid-bg" />
+            <div className="hero-glow" />
+
+            {/* Hero content */}
+            <div style={{ position: "relative", zIndex: 1, padding: "56px 56px 48px" }}>
+              <div className="accent-chip animate-fade-up">
+                <span className="chip-dot" />
+                Team 5 · Final Year Major Project · CSE-A · KMIT · 2026
               </div>
-            </section>
-            <div className="grid gap-0 md:grid-cols-2 xl:grid-cols-1">
-              <ModeCard
-                title="Practice Mode"
-                description="Work solo with Socratic hints. Run code, track errors, and learn through guided questions."
-                action="Enter practice"
-                onClick={() => navigate("/practice")}
-              />
-              <ModeCard
-                title="Game Mode"
-                description="Create or join a room, sync code in real-time, and compete on hints vs speed."
-                action="Enter game"
-                onClick={() => navigate("/game")}
-              />
+              <h1 className="hero-headline animate-fade-up-1" style={{ marginTop: "24px" }}>
+                SocraCode
+              </h1>
+              <p className="animate-fade-up-1" style={{ marginTop: "10px", fontSize: "15px", fontWeight: 500, color: "var(--text-2)", letterSpacing: "-0.01em", maxWidth: "500px" }}>
+                Graph-based agentic misconception planning for multi-turn Socratic code learning
+              </p>
+              <p className="hero-sub animate-fade-up-2" style={{ marginTop: "16px" }}>
+                Run code, inspect failures, and get guided Socratic hints from an AI tutor — without being handed the solution. Learn to debug, not just fix.
+              </p>
+              <div className="animate-fade-up-3" style={{ display: "flex", gap: "12px", marginTop: "32px", flexWrap: "wrap" }}>
+                <button className="cta-primary" onClick={() => navigate("/practice")}>
+                  Open Practice Studio
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 8H13M9 4L13 8L9 12" />
+                  </svg>
+                </button>
+                <button className="cta-secondary" onClick={() => navigate("/game")}>
+                  Multiplayer Room
+                </button>
+              </div>
             </div>
-          </div>
-        )}
 
-        {mode === "practice" && (
-          <div className="flex min-h-0 flex-1 gap-0 overflow-hidden">
-            {/* Left column: Problem statement */}
-            <div className="glass-panel w-80 flex-none flex-col overflow-y-auto border-r border-white/5 p-3">
+            {/* Feature highlights */}
+            <div style={{ position: "relative", zIndex: 1, padding: "0 56px 48px", borderTop: "1px solid var(--border)" }}>
+              <div className="home-section-label" style={{ paddingTop: "40px" }}>Features</div>
+              <div className="features-grid">
+                {[
+                  {
+                    icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" /></svg>,
+                    color: "var(--violet-2)", colorSoft: "var(--violet-soft)",
+                    title: "Socratic AI Tutor",
+                    desc: "Guided questions, never direct answers — learn to think like a debugger."
+                  },
+                  {
+                    icon: <svg width="16" height="16" viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 1.5L10 6L2.5 10.5V1.5Z" /></svg>,
+                    color: "var(--mint)", colorSoft: "var(--mint-soft)",
+                    title: "Real Code Execution",
+                    desc: "Run Python, Java and C++ in a sandboxed environment with instant output."
+                  },
+                  {
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20v-12M22 4v16"/></svg>,
+                    color: "var(--sky)", colorSoft: "var(--sky-soft)",
+                    title: "Misconception Tracking",
+                    desc: "Knowledge graph maps your recurring bugs, adapting hints to your gaps."
+                  },
+                  {
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>,
+                    color: "var(--ember)", colorSoft: "var(--ember-soft)",
+                    title: "Competitive Mode",
+                    desc: "Real-time multiplayer debugging races — compete on speed and hint efficiency."
+                  },
+                ].map((f) => (
+                  <div key={f.title} className="feature-card">
+                    <div className="feature-card-header">
+                      <div className="feature-card-icon" style={{ background: f.colorSoft, color: f.color }}>{f.icon}</div>
+                      <div className="feature-card-title">{f.title}</div>
+                    </div>
+                    <div className="feature-card-desc">{f.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Why Socratic learning */}
+            <div style={{ position: "relative", zIndex: 1, padding: "0 56px 48px", borderTop: "1px solid var(--border)" }}>
+              <div className="home-section-label" style={{ paddingTop: "40px" }}>Why Socratic Learning?</div>
+              <p style={{ fontSize: "13px", color: "var(--text-2)", lineHeight: "1.7", marginTop: "10px", maxWidth: "480px" }}>
+                The Socratic method is proven to build deeper, lasting understanding. Instead of copying an answer, you reason your way to it — with guidance at each step.
+              </p>
+              <div className="benefits-list">
+                {[
+                  { label: "Deeper retention", desc: "Understanding a bug beats memorising its fix." },
+                  { label: "Active reasoning", desc: "You find the bug — AI only asks the right questions." },
+                  { label: "Metacognition", desc: "Learn how to debug, not just this one program." },
+                ].map((b) => (
+                  <div key={b.label} className="benefit-row">
+                    <span className="benefit-dot" />
+                    <div>
+                      <span className="benefit-label">{b.label}</span>
+                      <span className="benefit-desc"> — {b.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer credit strip */}
+            <div className="home-footer-strip" style={{ borderTop: "1px solid var(--border)" }}>
+              <span>Built by the SocraCode team at KMIT</span>
+              <button className="home-footer-link" onClick={() => navigate("/about")}>
+                Meet the team
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 8H13M9 4L13 8L9 12" />
+                </svg>
+              </button>
+            </div>
+          </section>
+
+          {/* Mode cards column */}
+          <div style={{ display: "flex", flexDirection: "column", borderLeft: "1px solid var(--border)", overflow: "hidden" }}>
+            <ModeCard
+              num="01"
+              variant="practice"
+              title="Practice Mode"
+              description="Work solo with a Socratic AI tutor. Run code, inspect errors, and learn through guided questions — not copy-paste answers."
+              action="Enter practice"
+              onClick={() => navigate("/practice")}
+            />
+            <div style={{ height: "1px", background: "var(--border)", flexShrink: 0 }} />
+            <ModeCard
+              num="02"
+              variant="game"
+              title="Game Mode"
+              description="Create or join a room, sync code in real-time with teammates, and compete on speed vs. hint usage."
+              action="Enter game"
+              onClick={() => navigate("/game")}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Practice ──────────────────────────────────── */}
+      {mode === "practice" && (
+        <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+          {/* Problem panel */}
+          <div className="problem-panel" style={{ width: "280px", flexShrink: 0 }}>
+            <div className="panel-header">
+              <div className="panel-icon" style={{ background: "var(--sky-soft)", color: "var(--sky)" }}>
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a5 5 0 110 10A5 5 0 018 3zm0 3a1 1 0 00-1 1v3a1 1 0 002 0V7a1 1 0 00-1-1zm0-2a1 1 0 100 2 1 1 0 000-2z" />
+                </svg>
+              </div>
+              <span className="panel-header-title">Problem</span>
+            </div>
+            <div className="problem-content">
               {selectedProblemId && problemDetail ? (
                 <>
-                  <div className="whitespace-pre-wrap text-sm leading-7 text-white/72">
-                    {problemDetail.statement}
-                  </div>
+                  <p className="problem-statement">{problemDetail.statement}</p>
                   {problemDetail.bug_desc && (
-                    <div className="mt-4 rounded-lg bg-emerald-500/8 px-3 py-2 text-xs leading-6 text-emerald-200/85">
-                      <div className="font-semibold text-emerald-300 mb-1">Bug Description</div>
-                      {problemDetail.bug_desc}
+                    <div className="bug-info-box">
+                      <div className="bug-info-label">Bug hint</div>
+                      <p className="bug-info-text">{problemDetail.bug_desc}</p>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center">
-                  <div className="text-sm text-white/50 mb-2">📝</div>
-                  <p className="text-sm text-white/65">
-                    {selectedProblemId ? "Loading problem..." : "Select a problem from the top menu"}
+                <div style={{ paddingTop: "40px", textAlign: "center" }}>
+                  <div style={{ fontSize: "28px", marginBottom: "12px", filter: "grayscale(0.3)" }}>📋</div>
+                  <p style={{ fontSize: "12px", color: "var(--text-2)", lineHeight: "1.6" }}>
+                    {selectedProblemId ? "Loading…" : "Select a problem from the top bar to get started."}
                   </p>
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Center column: Editor + Terminal */}
-            <div className="flex min-w-0 flex-1 flex-col gap-0">
-              <div className="relative min-h-0 flex-1 overflow-hidden bg-neutral-900">
-                <EditorPane language={language} code={code} onChange={setCode} height="100%" />
+          {/* Editor + Terminal */}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
+            {/* Problem info bar */}
+            <div className="editor-info-bar">
+              <div className="editor-info-left">
+                {problemDetail ? (
+                  <>
+                    <span className="editor-problem-title">{problemDetail.title}</span>
+                    {problemDetail.topic && (
+                      <span className="editor-info-badge editor-badge-topic">{problemDetail.topic}</span>
+                    )}
+                    {problemDetail.kind && (
+                      <span className="editor-info-badge editor-badge-kind">{problemDetail.kind}</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="editor-info-placeholder">No problem selected — using template</span>
+                )}
               </div>
-              <div
-                className="h-1 flex-none cursor-row-resize bg-white/5 hover:bg-blue-500/40 transition-colors"
-                onMouseDown={handleTerminalResize}
-                title="Drag to resize"
-              />
-              <div className="flex-none border-t border-white/5" style={{ height: terminalHeight }}>
-                <Terminal output={runResult?.stdout ?? ""} error={runResult?.stderr} />
+              <div className="editor-info-right">
+                <span className="editor-info-badge editor-badge-lang">{language}</span>
               </div>
             </div>
-
-            {/* Right column: Tutor/Hint panel */}
-            <div className="glass-panel flex w-96 flex-none flex-col overflow-hidden border-l border-white/5">
-              <div className="flex-none border-b border-white/5 bg-neutral-900/50 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                    <span className="text-xs">✦</span>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-100">AI Teacher</div>
-                    <div className="text-[10px] text-gray-400">
-                      {hint?.score ? `Score: ${hint.score}` : "Socratic Mode"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <TutorChatPanel
-                  messages={chatMessages}
-                  input={chatInput}
-                  busy={chatting || analyzing}
-                  onInputChange={setChatInput}
-                  onSubmit={handleTutorChat}
-                />
-              </div>
+            <div style={{ flex: 1, minHeight: 0, overflow: "hidden", background: "#0a0a12" }}>
+              <EditorPane language={language} code={code} onChange={setCode} height="100%" />
+            </div>
+            <div className="terminal-resize-handle" onMouseDown={handleTerminalResize} />
+            <div style={{ height: `${terminalHeight}px`, flexShrink: 0 }}>
+              <Terminal
+                output={runResult?.stdout ?? ""}
+                error={runResult?.stderr}
+                exitCode={runResult?.exit_code}
+                durationMs={runResult?.duration_ms}
+              />
             </div>
           </div>
-        )}
 
-        {mode === "game" && (
-          <div className="grid gap-0 p-0 flex-1">
-            {!roomState && (
-              <div className="grid gap-6 lg:grid-cols-[2fr_1fr] p-6">
-                <div className="glass-panel p-6">
-                  <div className="text-sm text-white/70">Start a room</div>
-                  <div className="mt-4 flex flex-wrap gap-3">
+          {/* AI Tutor panel */}
+          <div style={{ width: "340px", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div className="panel-header">
+              <div className="ai-badge">
+                <span style={{ fontSize: "12px" }}>✦</span>
+              </div>
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>AI Tutor</div>
+                <div style={{ fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.06em" }}>
+                  {(hint as any)?.score ? `Score: ${(hint as any).score}` : "Socratic Mode"}
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+              <TutorChatPanel
+                messages={chatMessages}
+                input={chatInput}
+                busy={chatting || analyzing}
+                onInputChange={setChatInput}
+                onSubmit={handleTutorChat}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── About ─────────────────────────────────────── */}
+      {mode === "about" && <AboutPage onBack={() => navigate("/")} />}
+
+      {/* ── Game ──────────────────────────────────────── */}
+      {mode === "game" && (
+        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
+          {!roomState && (
+            <div style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px 24px",
+            }}>
+              <div style={{ width: "100%", maxWidth: "800px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                {/* Create game */}
+                <div className="lobby-card">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                    <span style={{ fontSize: "18px" }}>🎮</span>
+                    <h3 style={{ fontFamily: "'Bricolage Grotesque', ui-sans-serif", fontWeight: 600, fontSize: "18px", letterSpacing: "-0.02em", color: "var(--text)" }}>
+                      Create a Room
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: "12px", color: "var(--text-2)", marginBottom: "22px", lineHeight: "1.6" }}>
+                    Start a new game room and invite others to join using the room ID.
+                  </p>
+                  <div style={{ marginBottom: "14px" }}>
+                    <label className="section-label" style={{ display: "block", marginBottom: "6px" }}>Language</label>
                     <select
-                      className="ui-select rounded-xl px-4 py-2.5 text-sm"
+                      className="ui-select"
+                      style={{ width: "100%", padding: "9px 32px 9px 12px", height: "38px" }}
                       value={language}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => setLanguage(e.target.value as Language)}
                     >
@@ -494,110 +627,148 @@ export default function App() {
                       <option value="java">Java</option>
                       <option value="cpp">C++</option>
                     </select>
-                    <button
-                      className="ui-button rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white"
-                      onClick={handleCreateGame}
-                    >
-                      Create game
-                    </button>
                   </div>
-                  <div className="mt-6 text-xs text-white/45">Seed code will use the current editor snippet.</div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: "100%", padding: "10px 16px", justifyContent: "center" }}
+                    onClick={handleCreateGame}
+                  >
+                    Create Game
+                  </button>
+                  <p style={{ fontSize: "11px", color: "var(--text-3)", marginTop: "10px" }}>
+                    Seed code uses the current editor snippet.
+                  </p>
                 </div>
-                <div className="glass-panel p-6">
-                  <div className="text-sm text-white/70">Join existing room</div>
-                  <div className="mt-4 flex flex-wrap gap-3">
+
+                {/* Join game */}
+                <div className="lobby-card">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                    <span style={{ fontSize: "18px" }}>🔗</span>
+                    <h3 style={{ fontFamily: "'Bricolage Grotesque', ui-sans-serif", fontWeight: 600, fontSize: "18px", letterSpacing: "-0.02em", color: "var(--text)" }}>
+                      Join a Room
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: "12px", color: "var(--text-2)", marginBottom: "22px", lineHeight: "1.6" }}>
+                    Enter a room ID shared by your opponent to join their session.
+                  </p>
+                  <div style={{ marginBottom: "14px" }}>
+                    <label className="section-label" style={{ display: "block", marginBottom: "6px" }}>Room ID</label>
                     <input
-                      className="ui-input rounded-xl px-4 py-2.5 text-sm"
-                      placeholder="Room ID"
+                      className="ui-input"
+                      style={{ width: "100%", padding: "9px 12px", height: "38px" }}
+                      placeholder="Paste room ID…"
                       value={roomId}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setRoomId(e.target.value)}
                     />
-                    <button
-                      className="ui-button rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white/85"
-                      onClick={handleJoinGame}
-                    >
-                      Join
-                    </button>
                   </div>
-                  <div className="mt-4 text-sm text-white/70">Your name</div>
-                  <input
-                    className="ui-input mt-2 w-full rounded-xl px-4 py-2.5 text-sm"
-                    value={playerName}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setPlayerName(e.target.value)}
-                  />
+                  <div style={{ marginBottom: "14px" }}>
+                    <label className="section-label" style={{ display: "block", marginBottom: "6px" }}>Your Name</label>
+                    <input
+                      className="ui-input"
+                      style={{ width: "100%", padding: "9px 12px", height: "38px" }}
+                      value={playerName}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setPlayerName(e.target.value)}
+                      placeholder="Display name…"
+                    />
+                  </div>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ width: "100%", padding: "10px 16px", justifyContent: "center", border: "1px solid var(--border-2)" }}
+                    onClick={handleJoinGame}
+                    disabled={!roomId.trim()}
+                  >
+                    Join Room
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {roomState && (
-              <div className="grid gap-6 lg:grid-cols-[2fr_1fr] p-6">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="status-pill rounded-xl px-4 py-2 text-sm text-white/78">
-                      Room <span className="font-semibold text-blue-300">{roomState.room_id}</span>
-                    </div>
-                    <div className="status-pill rounded-xl px-4 py-2 text-sm text-white/78">
-                      Elapsed {elapsed}s
-                    </div>
-                    <button
-                      className="ui-button rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300"
-                      onClick={runGame}
-                      disabled={gameRunning}
-                    >
-                      {gameRunning ? "Running..." : "Run"}
-                    </button>
-                    <button
-                      className="ui-button rounded-xl border border-blue-500/25 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-300"
-                      onClick={hintGame}
-                      disabled={gameAnalyzing || gameChatting}
-                    >
-                      {gameAnalyzing ? "Asking..." : "Hint"}
-                    </button>
-                  </div>
+          {roomState && (
+            <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 320px", minHeight: 0 }}>
+              {/* Editor column */}
+              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid var(--border)" }}>
+                {/* Room strip */}
+                <div className="room-strip">
+                  <span className="room-id-badge">{roomState.room_id}</span>
+                  <span className="elapsed-badge">⏱ {elapsed}s</span>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    className="btn btn-run"
+                    style={{ padding: "6px 14px" }}
+                    onClick={runGame}
+                    disabled={gameRunning}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 1.5L10 6L2.5 10.5V1.5Z" /></svg>
+                    {gameRunning ? "Running…" : "Run"}
+                  </button>
+                  <button
+                    className="btn btn-hint"
+                    style={{ padding: "6px 14px" }}
+                    onClick={hintGame}
+                    disabled={gameAnalyzing || gameChatting}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" /></svg>
+                    {gameAnalyzing ? "Asking…" : "Hint"}
+                  </button>
+                </div>
+
+                {/* Editor */}
+                <div style={{ flex: 1, minHeight: 0, background: "#0a0a12" }}>
                   <EditorPane
                     language={roomState.language}
                     code={roomState.code}
                     onChange={updateGameCode}
-                    height="480px"
+                    height="100%"
                   />
                 </div>
-                <div className="grid gap-4">
-                  <Scoreboard
-                    players={roomState.players}
-                    scores={roomState.scores}
-                    hints={roomState.hints_used}
+
+                {/* Terminal */}
+                <div className="terminal-resize-handle" onMouseDown={handleTerminalResize} />
+                <div style={{ height: `${terminalHeight}px`, flexShrink: 0 }}>
+                  <Terminal
+                    output={gameRun?.stdout ?? ""}
+                    error={gameRun?.stderr}
+                    exitCode={gameRun?.exit_code}
+                    durationMs={gameRun?.duration_ms}
                   />
-                  <Terminal output={gameRun?.stdout ?? ""} error={gameRun?.stderr} />
-                  <div className="glass-panel flex min-h-[360px] flex-col overflow-hidden">
-                    <div className="flex-none border-b border-white/5 bg-neutral-900/50 px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                          <span className="text-xs">✦</span>
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-100">AI Teacher</div>
-                          <div className="text-[10px] text-gray-400">
-                            {gameHint?.score ? `Score: ${gameHint.score}` : "Room Tutor"}
-                          </div>
-                        </div>
+                </div>
+              </div>
+
+              {/* Right sidebar: scoreboard + tutor */}
+              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <Scoreboard
+                  players={roomState.players}
+                  scores={roomState.scores}
+                  hints={roomState.hints_used}
+                />
+                <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", borderTop: "1px solid var(--border)" }}>
+                  <div className="panel-header">
+                    <div className="ai-badge">
+                      <span style={{ fontSize: "12px" }}>✦</span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>AI Tutor</div>
+                      <div style={{ fontSize: "10px", color: "var(--text-3)", letterSpacing: "0.06em" }}>
+                        {(gameHint as any)?.score ? `Score: ${(gameHint as any).score}` : "Room Tutor"}
                       </div>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-hidden">
-                      <TutorChatPanel
-                        messages={gameChatMessages}
-                        input={gameChatInput}
-                        busy={gameChatting || gameAnalyzing}
-                        onInputChange={setGameChatInput}
-                        onSubmit={handleGameTutorChat}
-                      />
-                    </div>
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                    <TutorChatPanel
+                      messages={gameChatMessages}
+                      input={gameChatInput}
+                      busy={gameChatting || gameAnalyzing}
+                      onInputChange={setGameChatInput}
+                      onSubmit={handleGameTutorChat}
+                    />
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

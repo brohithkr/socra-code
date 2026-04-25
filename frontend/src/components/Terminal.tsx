@@ -1,29 +1,44 @@
 interface TerminalProps {
   output: string;
   error?: string;
+  exitCode?: number;
+  durationMs?: number;
 }
 
-export default function Terminal({ output, error }: TerminalProps) {
-  const primaryOutput = output || error || "// Output will appear here...";
+export default function Terminal({ output, error, exitCode, durationMs }: TerminalProps) {
+  const hasOutput = !!output;
+  const hasError = !!error;
+  const hasRun = hasOutput || hasError;
+  const success = hasRun && exitCode === 0;
+  const failure = hasRun && typeof exitCode === "number" && exitCode !== 0;
 
   return (
-    <div className="terminal-shell h-full">
-      <div className="terminal-head flex items-center justify-between px-4 py-2">
-        <span className="text-[11px] font-mono uppercase tracking-[0.24em] text-white/40">Console Output</span>
-        <div className="flex gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-red-500/25" />
-          <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/25" />
-          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/25" />
+    <div className="terminal-wrap" style={{ height: "100%" }}>
+      <div className="terminal-chrome">
+        <div className="terminal-dots">
+          <div className="terminal-dot red" />
+          <div className="terminal-dot yellow" />
+          <div className="terminal-dot green" />
         </div>
+        <span className="terminal-label">Output</span>
+        {hasRun && (
+          <span style={{ marginLeft: "auto" }}>
+            {success && <span className="terminal-success-badge">✓ Exit 0{durationMs !== undefined ? ` · ${durationMs}ms` : ""}</span>}
+            {failure && <span className="terminal-error-badge">✗ Exit {exitCode}{durationMs !== undefined ? ` · ${durationMs}ms` : ""}</span>}
+          </span>
+        )}
       </div>
-      <pre className="console-good min-h-[140px] whitespace-pre-wrap p-4 font-['Geist_Mono'] text-xs leading-6">
-        {primaryOutput}
-      </pre>
-      {error && output && (
-        <pre className="console-bad whitespace-pre-wrap border-t border-white/5 px-4 py-3 font-['Geist_Mono'] text-xs leading-6">
-          {error}
-        </pre>
-      )}
+      <div className="terminal-body">
+        {!hasRun && (
+          <span className="terminal-placeholder">// Run your code to see output here</span>
+        )}
+        {hasOutput && (
+          <span className="terminal-stdout">{output}</span>
+        )}
+        {hasError && (
+          <span className="terminal-stderr">{hasOutput ? "\n" : ""}{error}</span>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import type { ChatMessage } from "../lib/types";
 
 interface TutorChatPanelProps {
@@ -10,72 +10,105 @@ interface TutorChatPanelProps {
   onSubmit: () => void;
 }
 
+const SendIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 8H13M9 4L13 8L9 12" />
+  </svg>
+);
+
 export default function TutorChatPanel({
   messages,
   input,
   busy = false,
-  placeholder = "Ask a doubt...",
+  placeholder = "Ask a question… (Enter to send)",
   onInputChange,
   onSubmit,
 }: TutorChatPanelProps) {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, busy]);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!busy && input.trim()) onSubmit();
+    }
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-gray-950/50">
-      <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
-        {messages.length === 0 ? (
-          <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-4 text-sm leading-6 text-white/55">
-            Ask for a hint or type a doubt to start.
+    <div className="chat-panel">
+      <div className="chat-messages" ref={scrollRef}>
+        {messages.length === 0 && !busy ? (
+          <div className="chat-empty">
+            <div className="chat-empty-icon">✦</div>
+            <p className="chat-empty-text">
+              Ask for a hint using <strong>Ask AI</strong> above, or type a specific question below.
+            </p>
           </div>
         ) : (
-          messages.map((message, index) => (
+          messages.map((msg, i) => (
             <div
-              key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
-              className={`flex ${message.role === "student" ? "justify-end" : "justify-start"}`}
+              key={`${msg.role}-${i}`}
+              className={`chat-bubble-wrap ${msg.role}`}
             >
-              <div
-                className={`max-w-[88%] rounded-lg px-3 py-2 text-sm leading-6 ${
-                  message.role === "student"
-                    ? "bg-blue-600/20 text-blue-50"
-                    : "bg-white/[0.05] text-white/78"
-                }`}
-              >
-                <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/38">
-                  {message.role === "student" ? "You" : "Tutor"}
+              <div className={`chat-avatar ${msg.role}`}>
+                {msg.role === "tutor" ? "✦" : "U"}
+              </div>
+              <div>
+                <div className="chat-role-label">
+                  {msg.role === "tutor" ? "AI Tutor" : "You"}
                 </div>
-                <div className="whitespace-pre-wrap break-words">{message.content}</div>
+                <div className={`chat-bubble ${msg.role}`}>
+                  {msg.content}
+                </div>
               </div>
             </div>
           ))
         )}
+
         {busy && (
-          <div className="max-w-[88%] rounded-lg bg-white/[0.04] px-3 py-2 text-sm text-white/45">
-            Thinking...
+          <div className="chat-bubble-wrap tutor">
+            <div className="chat-avatar tutor">✦</div>
+            <div>
+              <div className="chat-role-label">AI Tutor</div>
+              <div className="typing-indicator">
+                <div className="typing-dot" />
+                <div className="typing-dot" />
+                <div className="typing-dot" />
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      <form className="flex-none border-t border-white/5 bg-neutral-950/75 p-3" onSubmit={handleSubmit}>
-        <div className="relative">
+      <div className="chat-input-area">
+        <div className="chat-input-row">
           <textarea
-            className="ui-textarea min-h-[64px] max-h-[112px] w-full resize-none rounded-lg px-3 py-2 pr-20 text-sm leading-5"
+            className="chat-textarea"
             value={input}
             placeholder={placeholder}
-            onChange={(event) => onInputChange(event.target.value)}
             disabled={busy}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
           />
           <button
-            className="ui-button absolute bottom-2.5 right-2.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-            type="submit"
+            className="chat-send-btn"
+            onClick={onSubmit}
             disabled={busy || !input.trim()}
+            title="Send (Enter)"
           >
-            Send
+            <SendIcon />
           </button>
         </div>
-      </form>
+        <p style={{ fontSize: "10px", color: "var(--text-3)", marginTop: "5px", paddingLeft: "2px" }}>
+          Enter to send · Shift+Enter for new line
+        </p>
+      </div>
     </div>
   );
 }

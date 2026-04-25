@@ -1,10 +1,10 @@
-import React, { type ChangeEvent } from "react";
-import clsx from "clsx";
+import { type ChangeEvent } from "react";
 import type { ProblemSummary, Language } from "../lib/types";
 
 interface TopBarProps {
-  mode: "home" | "practice" | "game";
+  mode: "home" | "practice" | "game" | "about";
   onBack?: () => void;
+  onAbout?: () => void;
   language?: Language;
   onLanguageChange?: (language: Language) => void;
   problems?: ProblemSummary[];
@@ -17,9 +17,41 @@ interface TopBarProps {
   analyzing?: boolean;
 }
 
+const PlayIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
+    <path d="M2.5 1.5L10 6L2.5 10.5V1.5Z" />
+  </svg>
+);
+
+const SparkleIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+    <path d="M8 0L9.5 6.5L16 8L9.5 9.5L8 16L6.5 9.5L0 8L6.5 6.5L8 0Z" />
+  </svg>
+);
+
+const ArrowLeftIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 3L5 8L10 13" />
+  </svg>
+);
+
+const XIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+    <path d="M3 3L13 13M13 3L3 13" />
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="8" cy="8" r="7" />
+    <path d="M8 7v5M8 5v.5" />
+  </svg>
+);
+
 export default function TopBar({
   mode,
   onBack,
+  onAbout,
   language,
   onLanguageChange,
   problems = [],
@@ -32,21 +64,33 @@ export default function TopBar({
   analyzing = false,
 }: TopBarProps) {
   return (
-    <header className="flex items-center justify-between bg-white/[0.03] px-2 py-2 backdrop-blur-sm">
+    <header className="topbar">
+      {/* Left: brand */}
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-blue-400/20 bg-gradient-to-br from-blue-500/80 to-indigo-500 text-lg font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
-          S
-        </div>
+        {onBack && (
+          <button
+            className="btn btn-ghost"
+            style={{ padding: "5px 10px", fontSize: "12px" }}
+            onClick={onBack}
+          >
+            <ArrowLeftIcon />
+            Back
+          </button>
+        )}
+        <div className="logo-mark">S</div>
         <div>
-          <div className="text-lg font-semibold tracking-tight text-white">Socratic Sprint</div>
-          <div className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/45">Socratic Tutor</div>
+          <div className="brand-name">SocraCode</div>
+          <div className="brand-sub">Socratic Code Learning</div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
+
+      {/* Right: controls */}
+      <div className="flex items-center gap-2 flex-wrap justify-end">
         {mode === "practice" && language && onLanguageChange && (
           <>
             <select
-              className="ui-select rounded-lg px-3 py-1.5 text-xs text-neutral-300"
+              className="ui-select"
+              style={{ padding: "5px 28px 5px 10px", height: "32px" }}
               value={language}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => onLanguageChange(e.target.value as Language)}
             >
@@ -55,63 +99,69 @@ export default function TopBar({
               <option value="cpp">C++</option>
             </select>
             <select
-              className="ui-select max-w-[220px] rounded-lg px-3 py-1.5 text-xs text-neutral-300"
+              className="ui-select"
+              style={{ padding: "5px 28px 5px 10px", height: "32px", maxWidth: "200px" }}
               value={selectedProblemId}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => onProblemSelect?.(e.target.value)}
             >
-              <option value="">Select a problem</option>
-              {problems.map((problem) => (
-                <option key={problem.id} value={problem.id}>
-                  {problem.title}
+              <option value="">Select a problem…</option>
+              {problems.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
                 </option>
               ))}
             </select>
+            <div style={{ width: "1px", height: "20px", background: "var(--border-2)", margin: "0 2px" }} />
             {onRun && (
               <button
-                className="ui-button rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 border border-emerald-500/25"
+                className="btn btn-run"
+                style={{ padding: "5px 12px", height: "32px" }}
                 onClick={onRun}
                 disabled={running}
               >
-                {running ? "Running..." : "Run"}
+                <PlayIcon />
+                {running ? "Running…" : "Run"}
               </button>
             )}
             {onAsk && (
               <button
-                className="ui-button rounded-lg bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 border border-blue-500/25"
+                className="btn btn-hint"
+                style={{ padding: "5px 12px", height: "32px" }}
                 onClick={onAsk}
                 disabled={analyzing}
               >
-                {analyzing ? "Asking..." : "Ask AI"}
+                <SparkleIcon />
+                {analyzing ? "Thinking…" : "Ask AI"}
               </button>
             )}
             {onClear && (
               <button
-                className="ui-button rounded-lg bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-white/85 border border-white/10"
+                className="btn btn-ghost"
+                style={{ padding: "5px 10px", height: "32px" }}
                 onClick={onClear}
+                title="Clear session"
               >
-                Clear
+                <XIcon />
               </button>
             )}
           </>
         )}
-        <span
-          className={clsx(
-            "status-pill px-2 py-1 text-[11px] font-medium uppercase tracking-[0.22em]",
-            mode === "practice" && "border-blue-500/20 bg-blue-500/10 text-blue-300",
-            mode === "game" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
-            mode === "home" && "text-white/60"
-          )}
-        >
-          {mode}
-        </span>
-        {onBack && (
+
+        {mode === "home" && onAbout && (
           <button
-            className="ui-button bg-white/[0.03] px-3 py-2 text-sm text-white/85"
-            onClick={onBack}
+            className="btn btn-ghost"
+            style={{ padding: "5px 12px", height: "32px", fontSize: "12px" }}
+            onClick={onAbout}
           >
-            Back
+            <InfoIcon />
+            About
           </button>
         )}
+
+        <span className={`mode-badge mode-${mode}`}>
+          {mode !== "home" && mode !== "about" && <span className="dot" />}
+          {mode}
+        </span>
       </div>
     </header>
   );
