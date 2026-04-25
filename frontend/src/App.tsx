@@ -58,6 +58,7 @@ export default function App() {
   const [problems, setProblems] = useState<ProblemSummary[]>([]);
   const [selectedProblemId, setSelectedProblemId] = useState<string>("");
   const [problemDetail, setProblemDetail] = useState<ProblemDetail | null>(null);
+  const [sessionId, setSessionId] = useState<string>(() => makeId());
 
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [roomId, setRoomId] = useState<string>("");
@@ -102,6 +103,7 @@ export default function App() {
         setHint(null);
         setChatMessages([]);
         setChatInput("");
+        setSessionId(makeId());
       })
       .catch(() => {
         setProblemDetail(null);
@@ -160,7 +162,16 @@ export default function App() {
     setChatting(true);
 
     try {
-      const result = await sendTutorChat(language, code, userMessage, output, history, chatMessages);
+      const result = await sendTutorChat(
+        language,
+        code,
+        userMessage,
+        sessionId,
+        selectedProblemId || undefined,
+        output,
+        history,
+        chatMessages,
+      );
       setHint(result);
       setHistory((prev: string[]) => [...prev, result.hint]);
       setChatMessages((prev) => [...prev, { role: "tutor", content: result.hint }]);
@@ -313,6 +324,7 @@ export default function App() {
                   setHint(null);
                   setChatMessages([]);
                   setChatInput("");
+                  setSessionId(makeId());
                 }
               : undefined
           }
