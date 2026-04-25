@@ -30,10 +30,11 @@ export async function sendTutorChat(
   language: Language,
   code: string,
   userMessage: string,
+  sessionId: string,
+  problemId?: string,
   output?: string,
   history: string[] = [],
   chatHistory: ChatMessage[] = [],
-  sessionId?: string,
 ): Promise<HintResult> {
   const resp = await fetch(`${API_URL}/chat`, {
     method: "POST",
@@ -46,6 +47,7 @@ export async function sendTutorChat(
       user_message: userMessage,
       chat_history: chatHistory,
       session_id: sessionId,
+      problem_id: problemId,
     }),
   });
   if (!resp.ok) {
